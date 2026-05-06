@@ -1,7 +1,7 @@
 # Nseek — Client IA natif GTK4 pour Linux
 
 <p align="center">
-  <img src="assets/nseek-logo.png" alt="Nseek logo" width="500"/>
+  <img src="assets/nseek-logo.png?v=2" alt="Nseek logo" width="500"/>
 </p>
 
 <p align="center">
