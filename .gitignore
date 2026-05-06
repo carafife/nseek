@@ -1,0 +1,13 @@
+# Clé API — ne jamais publier !
+cle_deepseek_v4_api.txt
+
+# Fichiers de sauvegarde
+*.bak
+*.bak.py
+
+# Cache Python
+__pycache__/
+*.pyc
+
+# AppImages tierces
+*.AppImage
