@@ -1,13 +1,19 @@
 # Nseek — Client IA natif GTK4 pour Linux
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue)
-![GTK](https://img.shields.io/badge/GTK-4.0-green)
-![Fedora](https://img.shields.io/badge/Fedora-compatible-blue)
-![License](https://img.shields.io/badge/License-MIT-yellow)
+<p align="center">
+  <img src="assets/nseek-logo.svg" alt="Nseek logo" width="500"/>
+</p>
 
-**Nseek** est un client natif GTK4 pour interagir avec l'API [DeepSeek V4](https://platform.deepseek.com) sous Linux. Léger, rapide et intégré au bureau GNOME.
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10+-blue" alt="Python"/>
+  <img src="https://img.shields.io/badge/GTK-4.0-green" alt="GTK"/>
+  <img src="https://img.shields.io/badge/Fedora-compatible-blue" alt="Fedora"/>
+  <img src="https://img.shields.io/badge/License-MIT-yellow" alt="License"/>
+</p>
 
-![Capture d'écran de Nseek](screenshot.png)
+<p align="center">
+  <strong>Nseek</strong> est un client natif GTK4 pour interagir avec l'API <a href="https://platform.deepseek.com">DeepSeek V4</a> sous Linux. Léger, rapide et intégré au bureau GNOME.
+</p>
 
 ---
 
