@@ -1099,6 +1099,12 @@ class Win(Gtk.ApplicationWindow):
 
 class App(Gtk.Application):
     def __init__(self): super().__init__(application_id="fr.local.deepseek-v4")
-    def do_activate(self): Win(self).present()
+    def do_activate(self):
+        win = Win(self)
+        # Icône de la fenêtre
+        icon_path = os.path.join(os.path.dirname(__file__), "assets", "nseek-icon-ciel.svg")
+        if os.path.exists(icon_path):
+            win.set_icon_name(icon_path)
+        win.present()
 
 if __name__ == "__main__": App().run()
