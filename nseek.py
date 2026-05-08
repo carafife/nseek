@@ -449,18 +449,21 @@ class Win(Gtk.ApplicationWindow):
         cfg = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         cfg.add_css_class("cfg")
 
-        # Clé API
+        # Clé API — label masqué + bouton édition (Wayland workaround)
         row_key = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         l_key = Gtk.Label(label="Clé API :"); l_key.add_css_class("lbl"); l_key.set_size_request(65,-1)
-        buf = Gtk.TextBuffer()
-        tv = Gtk.TextView(buffer=buf)
-        tv.set_wrap_mode(Gtk.WrapMode.WORD_CHAR); tv.set_accepts_tab(False)
-        tv.set_size_request(-1, 34); tv.set_hexpand(True)
-        tv.set_top_margin(6); tv.set_bottom_margin(6)
-        tv.set_left_margin(6); tv.set_right_margin(6)
-        wrap_key = Gtk.Box(); wrap_key.add_css_class("input-tv"); wrap_key.set_hexpand(True); wrap_key.append(tv)
-        row_key.append(l_key); row_key.append(wrap_key); cfg.append(row_key)
-        self.key_buf = buf; self.key_tv = tv
+        self.key_buf = Gtk.TextBuffer()
+        self.key_lbl = Gtk.Label(label="— non définie —")
+        self.key_lbl.set_hexpand(True); self.key_lbl.set_xalign(0)
+        self.key_lbl.set_ellipsize(3); self.key_lbl.add_css_class("lbl")
+        self.key_lbl.set_tooltip_text("Votre clé API DeepSeek (sk-...)")
+        self.key_buf.connect("changed", lambda b: self._update_key_lbl())
+        btn_edit_key = Gtk.Button(label="✏️")
+        btn_edit_key.add_css_class("tool"); btn_edit_key.set_focusable(False)
+        btn_edit_key.set_tooltip_text("Saisir / modifier la clé API")
+        btn_edit_key.connect("clicked", self._edit_api_key)
+        row_key.append(l_key); row_key.append(self.key_lbl); row_key.append(btn_edit_key)
+        cfg.append(row_key)
 
         # Persona — label + bouton édition (Wayland workaround)
         row_sys = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
@@ -1822,7 +1825,9 @@ b.addEventListener(\'click\',()=>{
     # ── Clé API ───────────────────────────────────────────────
     def _load_key(self):
         try:
-            with open(KEY_FILE) as f: self.key_buf.set_text(f.read().strip())
+            with open(KEY_FILE) as f:
+                self.key_buf.set_text(f.read().strip())
+            self._update_key_lbl()
         except Exception: pass
 
     # ── Fichiers ──────────────────────────────────────────────
@@ -2208,6 +2213,81 @@ b.addEventListener(\'click\',()=>{
         self._ins(f"« {preview} »\n\n", "body")
         self.status.set_text("🔄 Régénération en cours...")
         self._send(regenerate=True)
+
+    def _update_key_lbl(self):
+        key = self.key_buf.get_text(self.key_buf.get_start_iter(), self.key_buf.get_end_iter(), False)
+        if key:
+            # Masquer la clé : sk-****...****xxxx
+            masked = key[:3] + "****" + key[-4:] if len(key) > 7 else "****"
+            self.key_lbl.set_text(masked)
+        else:
+            self.key_lbl.set_text("— non définie —")
+
+    def _edit_api_key(self, *_):
+        """Dialogue de saisie de la clé API (surface Wayland indépendante)."""
+        dlg = Gtk.Window(title="Nseek — Clé API DeepSeek")
+        dlg.set_default_size(560, 240)
+        dlg.set_transient_for(self)
+        dlg.set_modal(True)
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        box.set_margin_top(16); box.set_margin_bottom(16)
+        box.set_margin_start(16); box.set_margin_end(16)
+
+        hdr = Gtk.Label()
+        hdr.set_markup('<b>🔑 Clé API DeepSeek</b>')
+        hdr.set_xalign(0); hdr.add_css_class("lbl")
+        box.append(hdr)
+
+        info = Gtk.Label()
+        info.set_markup('<span font="9" foreground="#4a7aaa">Obtenez votre clé sur platform.deepseek.com · Format : sk-...</span>')
+        info.set_xalign(0); info.set_wrap(True)
+        box.append(info)
+
+        edit_buf = Gtk.TextBuffer()
+        current = self.key_buf.get_text(self.key_buf.get_start_iter(), self.key_buf.get_end_iter(), False)
+        edit_buf.set_text(current)
+        edit_tv = Gtk.TextView(buffer=edit_buf)
+        edit_tv.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        edit_tv.set_top_margin(8); edit_tv.set_left_margin(8)
+        edit_tv.set_right_margin(8); edit_tv.set_bottom_margin(8)
+        edit_tv.set_hexpand(True)
+        sw = Gtk.ScrolledWindow(); sw.set_child(edit_tv)
+        sw.set_hexpand(True); sw.set_size_request(-1, 70)
+        sw.add_css_class("input-tv")
+        box.append(sw)
+
+        btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        spacer = Gtk.Box(); spacer.set_hexpand(True); btn_box.append(spacer)
+
+        btn_cancel = Gtk.Button(label="Annuler"); btn_cancel.add_css_class("tool")
+        btn_cancel.set_focusable(False)
+        btn_cancel.connect("clicked", lambda *_: dlg.destroy())
+        btn_box.append(btn_cancel)
+
+        btn_ok = Gtk.Button(label="✅ Valider"); btn_ok.add_css_class("send")
+        btn_ok.set_focusable(False)
+        def _validate(*_):
+            txt = edit_buf.get_text(edit_buf.get_start_iter(), edit_buf.get_end_iter(), False).strip()
+            self.key_buf.set_text(txt)
+            # Sauvegarder dans le fichier
+            try:
+                os.makedirs(os.path.dirname(KEY_FILE), exist_ok=True)
+                with open(KEY_FILE, 'w') as f: f.write(txt)
+                self.status.set_text("✅ Clé API sauvegardée")
+            except Exception as e:
+                self.status.set_text(f"⚠️ Clé définie mais non sauvegardée : {e}")
+            dlg.destroy()
+        btn_ok.connect("clicked", _validate)
+        btn_box.append(btn_ok)
+        box.append(btn_box)
+
+        kc = Gtk.EventControllerKey()
+        kc.connect("key-pressed", lambda c,k,kc2,s: dlg.destroy() or True if k==65307 else False)
+        dlg.add_controller(kc)
+        dlg.set_child(box)
+        dlg.present()
+        GLib.timeout_add(100, lambda: edit_tv.grab_focus() or False)
 
     def _update_sys_lbl(self):
         txt = self.sys_buf.get_text(self.sys_buf.get_start_iter(), self.sys_buf.get_end_iter(), False)
