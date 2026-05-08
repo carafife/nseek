@@ -1,48 +1,73 @@
 # Nseek — Client IA natif GTK4 pour Linux
 
 <p align="center">
-  <img src="assets/nseek-logo.png?v=2" alt="Nseek logo" width="500"/>
+  <img src="assets/nseek-logo.png" alt="Nseek logo" width="560"/>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.10+-blue" alt="Python"/>
   <img src="https://img.shields.io/badge/GTK-4.0-green" alt="GTK"/>
+  <img src="https://img.shields.io/badge/GtkSourceView-5-orange" alt="GtkSourceView"/>
   <img src="https://img.shields.io/badge/Fedora-compatible-blue" alt="Fedora"/>
-  <img src="https://img.shields.io/badge/License-MIT-yellow" alt="License"/>
+  <img src="https://img.shields.io/badge/License-GPL%20v3-yellow" alt="License"/>
 </p>
 
 <p align="center">
-  <strong>Nseek</strong> est un client natif GTK4 pour interagir avec l'API <a href="https://platform.deepseek.com">DeepSeek V4</a> sous Linux. Léger, rapide et intégré au bureau GNOME.
+  <strong>Nseek</strong> est un client IA natif GTK4 pour Linux, conçu pour interagir avec l'API <a href="https://platform.deepseek.com">DeepSeek V4</a> directement depuis le bureau GNOME — sans navigateur, sans Electron, 100% natif.
 </p>
 
 ---
 
 ## ✨ Fonctionnalités
 
-- 💬 **Chat en temps réel** avec streaming des réponses
-- 🧠 **Mode Thinking** — affiche le raisonnement interne du modèle
-- 📂 **Historique intelligent** — titres extraits automatiquement des conversations
-- 📎 **Fichiers & PDF** — envoie des fichiers texte ou PDF jusqu'à 100 000 caractères
-- 🔍 **Recherche** dans les conversations avec surlignage
-- 💾 **Export** des conversations en `.txt`
-- 📊 **Stats en temps réel** — tokens utilisés et coût estimé
-- 🎨 **Thèmes clair/sombre** intégrés
-- ⌨️ **Raccourcis clavier** complets
-- 🌐 Accès direct à **DeepSeek Web**
+### 💬 Chat IA
+- Streaming temps réel des réponses
+- **Mode Thinking** — raisonnement interne du modèle visible
+- Détection et rendu des **blocs de code** avec coloration syntaxique (GtkSourceView 5)
+- Support des pièces jointes : fichiers texte et **PDF** (extraction automatique)
+- Glisser-déposer de fichiers dans la fenêtre de chat
+
+### 🎭 Persona & Langue
+- **Persona configurable** — définissez librement le rôle et le comportement de l'IA
+- **Sélecteur de 10 langues** : 🇫🇷 🇬🇧 🇪🇸 🇨🇳 🇸🇦 🇧🇷 🇷🇺 🇩🇪 🇯🇵 🇮🇳
+
+### ✏️ Éditeur de code intégré
+- Fenêtre indépendante avec **GtkSourceView 5**
+- Numéros de ligne, coloration syntaxique multi-langages
+- **Exécution directe** : Python, Bash, JavaScript (Node), Go
+- Bouton **🤖 Demander correction** — envoie le code et l'erreur à DeepSeek automatiquement
+- Sauvegarde dans `~/Documents/`
+
+### 📚 Historique & Sessions
+- Conversations sauvegardées localement en JSON (`~/.local/share/deepseek-chat/`)
+- Titres extraits automatiquement du premier message
+- Rechargement et suppression des sessions
+
+### 🎨 Interface
+- Thème **sombre** (bleu marine) et **clair** (blanc chaud) — `Ctrl+T`
+- Filigrane logo adaptatif selon le thème
+- Toolbar verticale avec toutes les actions
+- **Manuel utilisateur HTML intégré** (bouton Doc)
+- Splash screen animé au démarrage
+
+### 📊 Stats & Export
+- Compteur de tokens envoyés/reçus en temps réel
+- Coût estimé de la session
+- Export en `.txt`, impression via GTK PrintOperation
+- Recherche dans les conversations avec surlignage
 
 ---
 
 ## 📋 Prérequis
 
-- Linux (testé sur **Fedora 41+**)
+- Linux avec **GNOME/Wayland** (testé sur Fedora 41+)
 - Python 3.10+
-- GTK 4.0
-- PyGObject
+- GTK 4.0 + GtkSourceView 5
 
 ```bash
 # Fedora
-sudo dnf install python3-gobject gtk4
-pip install pypdf --break-system-packages
+sudo dnf install python3-gobject gtk4 gtksourceview5 python3-pip
+pip install pypdf cairosvg --break-system-packages
 ```
 
 ---
@@ -57,17 +82,17 @@ python3 nseek.py
 
 ---
 
-## 🔑 Configuration
+## 🔑 Configuration de la clé API
 
-1. Obtiens une clé API sur [platform.deepseek.com](https://platform.deepseek.com/api_keys)
-2. Lance Nseek et colle ta clé dans le champ **Clé API**
-3. **Optionnel** — pour ne pas ressaisir ta clé à chaque démarrage, sauvegarde-la dans un fichier texte :
+1. Crée ta clé sur [platform.deepseek.com](https://platform.deepseek.com/api_keys)
+2. Lance Nseek et clique sur **✏️** à côté de **Clé API** pour la saisir
+3. La clé est sauvegardée automatiquement dans :
 
 ```bash
-echo "sk-TACLÉ" > ~/Documents/cle_deepseek_v4_api.txt
+~/Documents/cle_deepseek_v4_api.txt
 ```
 
-> ⚠️ Ce nom de fichier est celui attendu par Nseek pour le chargement automatique. Ne le renomme pas.
+> ⚠️ Ne partage jamais ce fichier et ne le commite pas dans Git.
 
 ---
 
@@ -77,13 +102,14 @@ echo "sk-TACLÉ" > ~/Documents/cle_deepseek_v4_api.txt
 |-----------|--------|
 | `Ctrl+N` | Nouvelle conversation |
 | `Ctrl+L` | Effacer la conversation |
-| `Ctrl+F` | Rechercher |
+| `Ctrl+F` | Rechercher dans le chat |
 | `Ctrl+E` | Exporter en .txt |
-| `Ctrl+Shift+C` | Copier la dernière réponse |
 | `Ctrl+H` | Afficher/masquer l'historique |
 | `Ctrl+T` | Basculer thème clair/sombre |
 | `Ctrl+B` | Ouvrir DeepSeek Web |
 | `Ctrl+Q` | Quitter |
+| `Entrée` | Envoyer le message |
+| `Maj+Entrée` | Saut de ligne |
 
 ---
 
@@ -97,13 +123,30 @@ echo "sk-TACLÉ" > ~/Documents/cle_deepseek_v4_api.txt
 
 ---
 
+## 🔧 Workflow éditeur de code
+
+```
+Chat Nseek → DeepSeek génère du code → 📋 Copier
+    → ✏️ Éditeur → 📋 Coller → modifier → ▶ Exécuter
+    → erreur ? → 🤖 Demander correction → DeepSeek corrige
+    → 🐋 Nseek → réponse corrigée
+```
+
+---
+
 ## 📄 Licence
 
-MIT License — libre d'utilisation, modification et distribution.
+GPL v3 — libre d'utilisation, modification et redistribution.
+
+---
+
+## 👤 Auteur
+
+**carafife** — Projet open source communautaire Linux/Fedora
 
 ---
 
 ## 🙏 Remerciements
 
-- [DeepSeek](https://deepseek.com) pour l'API
+- [DeepSeek](https://deepseek.com) pour l'API V4
 - La communauté [Fedora](https://fedoraproject.org) pour l'inspiration
