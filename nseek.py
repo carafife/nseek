@@ -491,16 +491,16 @@ class Win(Gtk.ApplicationWindow):
 
         # Sélecteur de langue
         self.LANGUAGES = [
-            ("🇫🇷 Français",    "Réponds toujours en français."),
-            ("🇬🇧 English",     "Always respond in English."),
-            ("🇪🇸 Español",     "Responde siempre en español."),
-            ("🇨🇳 中文",        "请始终用中文回答。"),
-            ("🇸🇦 العربية",     "أجب دائماً باللغة العربية."),
-            ("🇧🇷 Português",   "Responda sempre em português."),
-            ("🇷🇺 Русский",     "Всегда отвечай на русском языке."),
-            ("🇩🇪 Deutsch",     "Antworte immer auf Deutsch."),
-            ("🇯🇵 日本語",      "常に日本語で答えてください。"),
-            ("🇮🇳 हिन्दी",      "हमेशा हिंदी में जवाब दें।"),
+            ("🇫🇷 Français",    "Réponds toujours en français, y compris dans ton raisonnement interne."),
+            ("🇬🇧 English",     "Always respond in English, including your internal reasoning."),
+            ("🇪🇸 Español",     "Responde siempre en español, incluyendo tu razonamiento interno."),
+            ("🇨🇳 中文",        "请始终用中文回答，包括内部推理过程。"),
+            ("🇸🇦 العربية",     "أجب دائماً باللغة العربية، بما في ذلك تفكيرك الداخلي."),
+            ("🇧🇷 Português",   "Responda sempre em português, incluindo seu raciocínio interno."),
+            ("🇷🇺 Русский",     "Всегда отвечай на русском языке, включая внутренние рассуждения."),
+            ("🇩🇪 Deutsch",     "Antworte immer auf Deutsch, einschließlich deiner internen Überlegungen."),
+            ("🇯🇵 日本語",      "常に日本語で答えてください。内部推論も含めて。"),
+            ("🇮🇳 हिन्दी",      "हमेशा हिंदी में जवाब दें, आंतरिक तर्क सहित।"),
         ]
         lang_names = [l[0] for l in self.LANGUAGES]
         self.lang_dd = Gtk.DropDown.new_from_strings(lang_names)
@@ -614,11 +614,18 @@ class Win(Gtk.ApplicationWindow):
         self.msg_tv.set_wrap_mode(Gtk.WrapMode.WORD_CHAR); self.msg_tv.set_accepts_tab(False)
         self.msg_tv.set_size_request(-1, 38); self.msg_tv.set_hexpand(True)
         self.msg_tv.set_top_margin(6); self.msg_tv.set_bottom_margin(6); self.msg_tv.set_left_margin(6)
-        mw = Gtk.Box(); mw.add_css_class("input-tv"); mw.set_hexpand(True); mw.append(self.msg_tv)
+        # Limiter la hauteur de saisie à 120px max avec scroll
+        mw = Gtk.ScrolledWindow(); mw.add_css_class("input-tv"); mw.set_hexpand(True)
+        mw.set_child(self.msg_tv)
+        mw.set_max_content_height(120); mw.set_propagate_natural_height(True)
+        mw.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         kc = Gtk.EventControllerKey(); kc.connect("key-pressed", self._on_key); self.msg_tv.add_controller(kc)
         bar.append(mw)
+        # 🗑 dans la barre efface UNIQUEMENT le texte saisi (pas la conversation)
         clr = Gtk.Button(label="🗑"); clr.add_css_class("tool"); clr.set_focusable(False)
-        clr.set_tooltip_text("Effacer [Ctrl+L]"); clr.connect("clicked", self._clear); bar.append(clr)
+        clr.set_tooltip_text("Effacer le texte saisi")
+        clr.connect("clicked", lambda *_: self.msg_buf.set_text("") or self.msg_tv.grab_focus())
+        bar.append(clr)
         self.send_btn = Gtk.Button(label="Envoyer ➤"); self.send_btn.add_css_class("send")
         self.send_btn.set_focusable(False); self.send_btn.connect("clicked", self._send)
         bar.append(self.send_btn)
@@ -872,260 +879,17 @@ class Win(Gtk.ApplicationWindow):
             self.send_err_btn.set_visible(True)
 
     def _send_error_to_deepseek(self, *_):
+        """Envoie le code + l'erreur à DeepSeek — cache l'éditeur pour éviter le tiling GNOME."""
         code = self.editor_buf.get_text(
             self.editor_buf.get_start_iter(), self.editor_buf.get_end_iter(), False)
         error = getattr(self, '_last_error', '')
         lang_id = self.editor_lang_model.get_string(self.editor_lang_dd.get_selected())
         msg = f"Ce code {lang_id} génère une erreur. Peux-tu le corriger ?\n\n```{lang_id}\n{code}\n```\n\nErreur :\n```\n{error}\n```"
         self.msg_buf.set_text(msg)
-        self.present()
-        GLib.timeout_add(200, self._send)
-        """Éditeur de code intégré avec GtkSourceView + exécution."""
-        import gi; gi.require_version('GtkSource', '5')
-        from gi.repository import GtkSource
-
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        box.set_vexpand(True); box.set_hexpand(True)
-
-        # ── Barre d'outils éditeur ────────────────────────────
-        tbar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        tbar.add_css_class("code-header")
-        tbar.set_margin_start(6); tbar.set_margin_end(6)
-        tbar.set_margin_top(4); tbar.set_margin_bottom(4)
-
-        lbl = Gtk.Label(label=" ✏️ ÉDITEUR "); lbl.add_css_class("code-lang")
-        tbar.append(lbl)
-
-        # Sélecteur de langage
-        langs = ["python3", "sh", "javascript", "c", "cpp", "rust", "go", "sql"]
-        self.editor_lang_model = Gtk.StringList.new(langs)
-        self.editor_lang_dd = Gtk.DropDown(model=self.editor_lang_model)
-        self.editor_lang_dd.set_focusable(False)
-        self.editor_lang_dd.set_tooltip_text("Langage")
-        tbar.append(self.editor_lang_dd)
-
-        spacer = Gtk.Box(); spacer.set_hexpand(True); tbar.append(spacer)
-
-        # Bouton vider l'éditeur
-        btn_clear = Gtk.Button(label="🗑 Vider")
-        btn_clear.add_css_class("tool"); btn_clear.set_focusable(False)
-        btn_clear.set_tooltip_text("Vider l'éditeur")
-        btn_clear.connect("clicked", lambda *_: self.editor_buf.set_text(""))
-        tbar.append(btn_clear)
-
-        # Bouton coller depuis chat
-        btn_paste = Gtk.Button(label="📋 Coller le code")
-        btn_paste.add_css_class("code-copy-btn"); btn_paste.set_focusable(False)
-        btn_paste.set_tooltip_text("Colle le dernier code copié depuis le chat")
-        btn_paste.connect("clicked", self._paste_to_editor)
-        tbar.append(btn_paste)
-
-        # Bouton sauvegarder
-        btn_save = Gtk.Button(label="💾 Sauver")
-        btn_save.add_css_class("tool"); btn_save.set_focusable(False)
-        btn_save.connect("clicked", self._save_editor_code)
-        tbar.append(btn_save)
-
-        # Bouton exécuter
-        self.run_btn = Gtk.Button(label="▶ Exécuter")
-        self.run_btn.add_css_class("send"); self.run_btn.set_focusable(False)
-        self.run_btn.connect("clicked", self._run_editor_code)
-        tbar.append(self.run_btn)
-
-        # Undo / Redo
-        btn_undo = Gtk.Button(label="↩")
-        btn_undo.add_css_class("tool"); btn_undo.set_focusable(False)
-        btn_undo.set_tooltip_text("Annuler  [Ctrl+Z]")
-        btn_undo.connect("clicked", lambda *_: self.editor_buf.undo())
-        tbar.append(btn_undo)
-
-        btn_redo = Gtk.Button(label="↪")
-        btn_redo.add_css_class("tool"); btn_redo.set_focusable(False)
-        btn_redo.set_tooltip_text("Rétablir  [Ctrl+Y]")
-        btn_redo.connect("clicked", lambda *_: self.editor_buf.redo())
-        tbar.append(btn_redo)
-
-        box.append(tbar)
-
-        # ── Zone éditeur (GtkSourceView) ──────────────────────
-        # Test : Gtk.TextView simple pour vérifier le focus
-        self.editor_buf = Gtk.TextBuffer()
-        self.editor_view = Gtk.TextView(buffer=self.editor_buf)
-        self.editor_view.set_editable(True)
-        self.editor_view.set_monospace(True)
-        self.editor_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
-        self.editor_view.set_vexpand(True)
-        self.editor_view.set_hexpand(True)
-        self.editor_view.set_top_margin(6); self.editor_view.set_left_margin(6)
-
-        sw_edit = Gtk.ScrolledWindow(); sw_edit.set_child(self.editor_view)
-        sw_edit.set_vexpand(True); sw_edit.set_size_request(-1, 300)
-        sw_edit.set_focusable(False)  # ne pas voler le focus
-        box.append(sw_edit)
-
-        # ── Séparateur redimensionnable ───────────────────────
-        sep = Gtk.Separator(); box.append(sep)
-
-        # ── Zone sortie ───────────────────────────────────────
-        out_bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        out_bar.add_css_class("code-header")
-        out_bar.set_margin_start(6); out_bar.set_margin_end(6)
-        out_bar.set_margin_top(2); out_bar.set_margin_bottom(2)
-        out_lbl = Gtk.Label(label=" 📤 SORTIE "); out_lbl.add_css_class("code-lang")
-        out_bar.append(out_lbl)
-        out_spacer = Gtk.Box(); out_spacer.set_hexpand(True); out_bar.append(out_spacer)
-
-        # Bouton envoyer l'erreur à DeepSeek
-        self.send_err_btn = Gtk.Button(label="🤖 Demander correction à DeepSeek")
-        self.send_err_btn.add_css_class("code-copy-btn"); self.send_err_btn.set_focusable(False)
-        self.send_err_btn.set_visible(False)
-        self.send_err_btn.connect("clicked", self._send_error_to_deepseek)
-        out_bar.append(self.send_err_btn)
-
-        btn_clear_out = Gtk.Button(label="🗑")
-        btn_clear_out.add_css_class("tool"); btn_clear_out.set_focusable(False)
-        btn_clear_out.connect("clicked", lambda *_: self.output_buf.set_text(""))
-        out_bar.append(btn_clear_out)
-        box.append(out_bar)
-
-        self.output_buf = Gtk.TextBuffer()
-        self.output_view = Gtk.TextView(buffer=self.output_buf)
-        self.output_view.set_editable(False)
-        self.output_view.set_monospace(True)
-        self.output_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
-        self.output_view.set_size_request(-1, 150)
-        sw_out = Gtk.ScrolledWindow(); sw_out.set_child(self.output_view)
-        sw_out.set_vexpand(False); sw_out.set_size_request(-1, 150)
-        box.append(sw_out)
-
-        # Mettre à jour le langage quand on change la sélection
-        self.editor_lang_dd.connect("notify::selected", self._on_editor_lang_changed)
-
-        return box
-
-    def _on_editor_lang_changed(self, dd, _):
-        import gi; gi.require_version('GtkSource', '5')
-        from gi.repository import GtkSource
-        lang_id = self.editor_lang_model.get_string(dd.get_selected())
-        lm = GtkSource.LanguageManager.get_default()
-        lang = lm.get_language(lang_id)
-        if lang: self.editor_buf.set_language(lang)
-
-    def _paste_to_editor(self, *_):
-        if hasattr(self, '_last_code') and self._last_code:
-            self.editor_buf.set_text(self._last_code)
-            GLib.timeout_add(100, lambda: self.editor_view.grab_focus() or False)
-            self.status.set_text("✅ Code collé dans l'éditeur — éditeur en bas")
-        else:
-            self.status.set_text("⚠️ Aucun code copié depuis le chat")
-
-    def _save_editor_code(self, *_):
-        code = self.editor_buf.get_text(
-            self.editor_buf.get_start_iter(), self.editor_buf.get_end_iter(), False)
-        if not code.strip():
-            self.status.set_text("⚠️ Éditeur vide !"); return
-
-        lang_id = self.editor_lang_model.get_string(self.editor_lang_dd.get_selected())
-        ext = {"python3":"py","sh":"sh","javascript":"js","c":"c","cpp":"cpp",
-               "rust":"rs","go":"go","sql":"sql"}.get(lang_id, "txt")
-
-        dlg = Gtk.FileDialog()
-        dlg.set_title("Sauvegarder le code")
-        dlg.set_initial_name(f"code.{ext}")
-        dlg.set_initial_folder(Gio.File.new_for_path(os.path.expanduser("~/Documents")))
-        dlg.save(self, None, self._on_save_done, code)
-
-    def _on_save_done(self, dlg, result, code):
-        try:
-            gfile = dlg.save_finish(result)
-            path = gfile.get_path()
-            with open(path, 'w') as f: f.write(code)
-            self.status.set_text(f"✅ Sauvegardé : {path}")
-        except Exception as e:
-            if "dismissed" not in str(e).lower():
-                self.status.set_text(f"Erreur sauvegarde : {e}")
-
-    def _run_editor_code(self, *_):
-        """Exécute le code de l'éditeur et affiche la sortie."""
-        import subprocess, tempfile, datetime
-        code = self.editor_buf.get_text(
-            self.editor_buf.get_start_iter(), self.editor_buf.get_end_iter(), False)
-        if not code.strip():
-            self.output_buf.set_text("⚠️ Éditeur vide !"); return
-
-        lang_id = self.editor_lang_model.get_string(self.editor_lang_dd.get_selected())
-        ext = {"python3":"py","sh":"sh","javascript":"js","c":"c","cpp":"cpp",
-               "rust":"rs","go":"go","sql":"sql"}.get(lang_id, "txt")
-        runners = {"python3":["python3"],"sh":["bash"],"javascript":["node"],
-                   "go":["go","run"],"rust":["rustc"]}
-        runner = runners.get(lang_id)
-        if not runner:
-            self.output_buf.set_text(f"⚠️ Exécution non supportée pour {lang_id}"); return
-
-        self.run_btn.set_sensitive(False)
-        self.run_btn.set_label("⏳ Exécution...")
-        self.output_buf.set_text("⏳ Exécution en cours...\n")
-        self.send_err_btn.set_visible(False)
-
-        def run_thread():
-            try:
-                with tempfile.NamedTemporaryFile(suffix=f".{ext}", mode='w',
-                                                  delete=False) as f:
-                    f.write(code); tmp = f.name
-                result = subprocess.run(
-                    runner + [tmp], capture_output=True, text=True, timeout=30)
-                out = result.stdout
-                err = result.stderr
-                rc  = result.returncode
-                os.unlink(tmp)
-                GLib.idle_add(self._show_output, out, err, rc)
-            except subprocess.TimeoutExpired:
-                GLib.idle_add(self._show_output, "", "⏱️ Timeout (30s)", 1)
-            except Exception as e:
-                GLib.idle_add(self._show_output, "", str(e), 1)
-
-        import threading
-        threading.Thread(target=run_thread, daemon=True).start()
-
-    def _show_output(self, stdout, stderr, returncode):
-        self.run_btn.set_sensitive(True)
-        self.run_btn.set_label("▶ Exécuter")
-        output = ""
-        if stdout: output += stdout
-        if stderr: output += f"\n⚠️ Erreurs :\n{stderr}"
-        if returncode == 0:
-            output = f"✅ Succès (code {returncode})\n\n" + output
-            self.send_err_btn.set_visible(False)
-        else:
-            output = f"❌ Échec (code {returncode})\n\n" + output
-            self._last_error = stderr or stdout
-            self.send_err_btn.set_visible(True)
-        self.output_buf.set_text(output.strip())
-
-    def _send_error_to_deepseek(self, *_):
-        """Envoie le code + l'erreur à DeepSeek pour correction."""
-        code = self.editor_buf.get_text(
-            self.editor_buf.get_start_iter(), self.editor_buf.get_end_iter(), False)
-        error = getattr(self, '_last_error', '')
-        lang_id = self.editor_lang_model.get_string(self.editor_lang_dd.get_selected())
-        msg = f"Ce code {lang_id} génère une erreur. Peux-tu le corriger ?\n\n```{lang_id}\n{code}\n```\n\nErreur :\n```\n{error}\n```"
-        # Basculer sur l'onglet chat et envoyer
-        self.msg_buf.set_text(msg)
-        GLib.idle_add(self.msg_tv.grab_focus)
-        GLib.timeout_add(200, self._send)
-        """Placeholder pour l'onglet terminal."""
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        box.set_valign(Gtk.Align.CENTER); box.set_halign(Gtk.Align.CENTER)
-        box.set_spacing(12)
-        lbl = Gtk.Label(label="⚡ Terminal Bash")
-        lbl.add_css_class("app-title")
-        sub = Gtk.Label(label="Cliquer sur l'onglet pour ouvrir le terminal\ndans une fenêtre dédiée")
-        sub.add_css_class("lbl"); sub.set_justify(Gtk.Justification.CENTER)
-        btn = Gtk.Button(label="⚡ Ouvrir le Terminal")
-        btn.add_css_class("send"); btn.set_focusable(False)
-        btn.connect("clicked", lambda *_: self._open_terminal_window())
-        box.append(lbl); box.append(sub); box.append(btn)
-        return box
+        # Cacher l'éditeur avant d'envoyer (minimize ne marche pas sur Wayland)
+        if hasattr(self, '_editor_win') and self._editor_win:
+            self._editor_win.hide()
+        GLib.timeout_add(300, self._send)
 
     def _open_terminal_window(self):
         """Ouvre le terminal dans une fenêtre séparée (focus Wayland OK)."""
@@ -1293,10 +1057,23 @@ class Win(Gtk.ApplicationWindow):
         bar.append(self.status)
 
         # Copyright
-        copy_lbl = Gtk.Label()
-        copy_lbl.set_markup('<span font="10" font_weight="bold" foreground="#5ab4f0">🐋 © 2026 carafife — Nseek v1.0 — GPL v3</span>')
-        copy_lbl.set_xalign(1)
-        bar.append(copy_lbl)
+        copy_box2 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        copy_box2.set_valign(Gtk.Align.CENTER)
+        try:
+            from gi.repository import GdkPixbuf, Gdk as _GdkI2
+            _icon_path2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets', 'nseek-icon-ciel.png')
+            if os.path.exists(_icon_path2):
+                _pb2 = GdkPixbuf.Pixbuf.new_from_file_at_scale(_icon_path2, 60, 60, True)
+                _tex2 = _GdkI2.Texture.new_for_pixbuf(_pb2)
+                _img2 = Gtk.Picture.new_for_paintable(_tex2)
+                _img2.set_size_request(60, 60)
+                _img2.set_can_shrink(False)
+                copy_box2.append(_img2)
+        except Exception: pass
+        copy_lbl2 = Gtk.Label()
+        copy_lbl2.set_markup('<span font="10" font_weight="bold" foreground="#5ab4f0">© 2026 carafife — Nseek v1.0 — GPL v3</span>')
+        copy_box2.append(copy_lbl2)
+        bar.append(copy_box2)
 
         self.stats_lbl = Gtk.Label()
         self.stats_lbl.set_xalign(1)
@@ -1422,8 +1199,8 @@ header{background:linear-gradient(135deg,var(--bg),var(--bg3),var(--bg));border-
 .sub{font-size:.8rem;letter-spacing:4px;color:var(--ac2);margin:.25rem 0}
 .pow{font-size:.75rem;color:var(--mu);margin:.25rem 0}
 .badge{display:inline-block;background:var(--bg3);border:1px solid var(--bd);color:var(--ci);font-size:.7rem;padding:.2rem .8rem;border-radius:20px;margin:.75rem 0}
-.theme-btn{background:var(--bg3);border:1px solid var(--bd);color:var(--ci);padding:.3rem .8rem;border-radius:20px;cursor:pointer;font-size:.75rem;margin:.5rem 0}
-.wrap{max-width:920px;margin:0 auto;padding:2rem}
+.theme-btn{background:var(--bg3);border:1px solid var(--bd);color:var(--ci);padding:.6rem 1.6rem;border-radius:20px;cursor:pointer;font-size:1rem;margin:.5rem 0;font-weight:500}
+.wrap{max-width:100%;padding:2rem 3rem}
 .toc{background:var(--bg2);border:1px solid var(--bd);border-left:3px solid var(--ac);border-radius:8px;padding:1.5rem;margin:2rem 0}
 .toc h2{color:var(--ac2);font-size:.8rem;letter-spacing:3px;margin-bottom:.75rem}
 .toc a{color:var(--ci);text-decoration:none;font-size:.9rem}
@@ -1446,9 +1223,9 @@ li{margin:.2rem 0}
 code{font-family:monospace;background:var(--cb);border:1px solid var(--bd);color:var(--ci);padding:.1rem .4rem;border-radius:4px;font-size:.85rem}
 pre{background:var(--cb);border:1px solid var(--bd);border-radius:6px;padding:1rem;margin:.75rem 0;overflow-x:auto;font-family:monospace;font-size:.85rem;color:var(--ci)}
 kbd{background:var(--bg3);border:1px solid var(--ac);color:var(--ci);font-family:monospace;font-size:.75rem;padding:.15rem .5rem;border-radius:4px}
-.sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.6rem;margin:.75rem 0}
+.sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:.6rem;margin:.75rem 0}
 .si2{background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:.5rem .9rem;display:flex;align-items:center;gap:.6rem;font-size:.85rem}
-.lg{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.4rem;margin:.75rem 0}
+.lg{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.4rem;margin:.75rem 0}
 .li{background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:.4rem .75rem;font-size:.9rem}
 .wf{display:flex;flex-direction:column;margin:.75rem 0}
 .ws{display:flex;align-items:flex-start;gap:1rem;padding:.6rem 0;border-left:2px solid var(--bd);padding-left:1.5rem;position:relative}
@@ -1873,13 +1650,10 @@ b.addEventListener(\'click\',()=>{
     def _render(self, text):
         for p in re.split(r'(```[\w]*\n.*?```)', text, flags=re.DOTALL):
             if p.startswith('```'):
-                # Extraire le langage et le code
                 lines = p.split('\n')
-                lang = lines[0].replace('```','').strip()
+                lang = lines[0].replace('```', '').strip()
                 code = '\n'.join(lines[1:]).rstrip('`\n')
-
-                # Insérer le bouton copier via ChildAnchor
-                GLib.idle_add(self._insert_code_block, lang, code)
+                self._insert_code_block(lang, code)
             else:
                 for line in p.split('\n'):
                     for seg in re.split(r'(\*\*[^*]+\*\*|`[^`]+`)', line):
@@ -1967,25 +1741,18 @@ b.addEventListener(\'click\',()=>{
         self._ins("\n\n", "body")
 
     def _rerender_last_response(self, reply):
-        """Après streaming, efface la dernière réponse et la re-rend avec détection de code."""
-        # Trouver le dernier "🤖 DeepSeek" dans le buffer
-        start = self.buf.get_start_iter()
-        end   = self.buf.get_end_iter()
+        """Après streaming, efface la dernière réponse et la re-rend avec blocs de code."""
+        end = self.buf.get_end_iter()
         marker = "🤖 DeepSeek"
         found = None
         it = self.buf.get_start_iter()
         while True:
             res = it.forward_search(marker, Gtk.TextSearchFlags.VISIBLE_ONLY, end)
             if not res: break
-            found = res[0]
-            it = res[1]
+            found = res[0]; it = res[1]
         if not found: self._scroll(); return
-
-        # Supprimer tout après le marqueur AI jusqu'à la fin
-        found.forward_chars(len(marker))
+        found.forward_chars(len(marker) + 1)
         self.buf.delete(found, self.buf.get_end_iter())
-
-        # Re-rendre proprement
         self._ins("\n", "body")
         self._render(reply)
         self._ins("\n", "body")
@@ -2404,6 +2171,7 @@ b.addEventListener(\'click\',()=>{
     def _clear(self, *_):
         if self.history: save_session(self.session_name, self.history); self._refresh_sidebar()
         self.history = []; self.buf.set_text(""); self.last_reply = ""
+        self.msg_buf.set_text("")  # effacer aussi le champ de saisie
         self.session_name = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
         self._msg("info","Conversation effacée."); self.msg_tv.grab_focus()
 
@@ -2673,11 +2441,24 @@ class App(Gtk.Application):
         pw_lbl.set_margin_top(6)
         box.append(pw_lbl)
 
+        copy_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        copy_box.set_halign(Gtk.Align.CENTER)
+        copy_box.set_margin_top(4); copy_box.set_margin_bottom(8)
+        try:
+            from gi.repository import GdkPixbuf, Gdk as _GdkI
+            _icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets', 'nseek-icon-ciel.png')
+            if os.path.exists(_icon_path):
+                _pb = GdkPixbuf.Pixbuf.new_from_file_at_scale(_icon_path, 84, 84, True)
+                _tex = _GdkI.Texture.new_for_pixbuf(_pb)
+                _img = Gtk.Picture.new_for_paintable(_tex)
+                _img.set_size_request(84, 84)
+                _img.set_can_shrink(False)
+                copy_box.append(_img)
+        except Exception: pass
         copy_lbl = Gtk.Label()
-        copy_lbl.set_markup('<span font="11" font_weight="bold" foreground="#90d8ff">🐋 © 2026 carafife — Nseek v1.0 — GPL v3</span>')
-        copy_lbl.set_margin_top(4)
-        copy_lbl.set_margin_bottom(8)
-        box.append(copy_lbl)
+        copy_lbl.set_markup('<span font="11" font_weight="bold" foreground="#90d8ff">© 2026 carafife — Nseek v1.0 — GPL v3</span>')
+        copy_box.append(copy_lbl)
+        box.append(copy_box)
 
         splash.present()
         self._splash = splash
