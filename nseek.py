@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
+# ─────────────────────────────────────────────────────────────────────────────
+# Nseek — Client IA natif GTK4 pour Linux
+# Auteur  : carafife
+# Licence : GPL v3
+# Dépend  : Python 3.10+, GTK 4, GtkSource 5, VTE 3.91, pypdf (optionnel)
+# ─────────────────────────────────────────────────────────────────────────────
 import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, GLib, Gio, Gdk, Pango
 import urllib.request, urllib.error
 import json, threading, queue, os, base64, datetime, re, signal, sys
 
+# ── Gestion du signal SIGINT (Ctrl+C dans le terminal) ───────────────────────
 signal.signal(signal.SIGINT, lambda *_: os._exit(0))
 try:
     from gi.repository import GLibUnix
@@ -12,12 +19,13 @@ try:
 except ImportError:
     GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, lambda: os._exit(0))
 
-API_URL  = "https://api.deepseek.com/v1/chat/completions"
-HIST_DIR = os.path.expanduser("~/.local/share/deepseek-chat")
-KEY_FILE = os.path.expanduser("~/Documents/cle_deepseek_v4_api.txt")
+# ── Constantes globales ───────────────────────────────────────────────────────
+API_URL  = "https://api.deepseek.com/v1/chat/completions"  # Endpoint DeepSeek
+HIST_DIR = os.path.expanduser("~/.local/share/deepseek-chat")  # Dossier historique JSON
+KEY_FILE = os.path.expanduser("~/Documents/cle_deepseek_v4_api.txt")  # Clé API sauvegardée
 os.makedirs(HIST_DIR, exist_ok=True)
 
-# Coût estimé par million de tokens (USD)
+# ── Coûts estimés par million de tokens (USD) ─────────────────────────────────
 COSTS = {
     "deepseek-v4-pro":   {"in": 1.74,  "out": 3.48},
     "deepseek-v4-flash": {"in": 0.14,  "out": 0.28},
@@ -36,6 +44,7 @@ def make_title(messages):
             title = ' '.join(words)
             return title[:45] if title else "Conversation"
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+# ── Extraction de texte depuis fichiers (PDF, texte brut) ───────────────────
 def extract_text(path, mime):
     """Extrait le texte d'un fichier selon son type."""
     if mime == 'application/pdf':
@@ -55,8 +64,9 @@ def extract_text(path, mime):
                 continue
         return open(path, 'rb').read().decode(errors='replace'), 0
 
-MAX_CHARS = 100_000
+MAX_CHARS = 100_000  # Limite de caractères pour les fichiers joints
 
+# ── Gestion des sessions (historique JSON) ───────────────────────────────────
 def session_path(name): return os.path.join(HIST_DIR, name + '.json')
 
 def save_session(name, messages):
@@ -72,6 +82,8 @@ def delete_session(name):
 def list_sessions():
     return sorted([f[:-5] for f in os.listdir(HIST_DIR) if f.endswith('.json')], reverse=True)
 
+# ── Feuilles de style GTK4 ───────────────────────────────────────────────────
+# CSS_DARK : thème sombre bleu marine (défaut)
 CSS_DARK = """
 window { background:#060d1a; }
 headerbar { background:#080f1e; border-bottom:1px solid #152238; }
@@ -134,6 +146,7 @@ viewport { background:#060d1a; border:none; }
 separator { background:#060d1a; border:none; min-height:0; min-width:0; }
 """
 
+# CSS_LIGHT : thème clair bleu ardoise
 CSS_LIGHT = """
 window { background:#f5f5f0; }
 headerbar { background:#e8e8e2; border-bottom:1px solid #c8c8c0; }
@@ -191,6 +204,8 @@ notebook header tabs tab:hover { background:#dcdcd6; color:#0d2545; }
 notebook stack { background:#f5f5f0; }
 """
 
+# ── Tags TextBuffer pour la coloration du chat ───────────────────────────────
+# TAGS_DARK : couleurs pour le thème sombre
 TAGS_DARK = {
     "you":   {"foreground":"#60a5fa","weight":700},
     "ai":    {"foreground":"#34d399","weight":700},
@@ -202,6 +217,7 @@ TAGS_DARK = {
     "info":  {"foreground":"#2d5a8a","style":2},
     "hl":    {"background":"#1d4ed8","foreground":"#ffffff"},
 }
+# TAGS_LIGHT : couleurs pour le thème clair
 TAGS_LIGHT = {
     "you":   {"foreground":"#1c71d8","weight":700},
     "ai":    {"foreground":"#26a269","weight":700},
@@ -214,6 +230,10 @@ TAGS_LIGHT = {
     "hl":    {"background":"#e6a817","foreground":"#000000"},
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Fenêtre principale de Nseek
+# Contient : headerbar, sidebar historique, zone chat, toolbar verticale
+# ─────────────────────────────────────────────────────────────────────────────
 class Win(Gtk.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app, title="Nseek")
@@ -272,6 +292,7 @@ class Win(Gtk.ApplicationWindow):
         os._exit(0)
 
     # ── HeaderBar ────────────────────────────────────────────
+    # ── Construction de la barre de titre (HeaderBar) ────────────────────────
     def _build_headerbar(self):
         hb = Gtk.HeaderBar()
         hb.set_show_title_buttons(False)  # cacher les boutons GNOME
@@ -318,11 +339,13 @@ class Win(Gtk.ApplicationWindow):
         for w in [btn_credits, btn_web]:
             hb.pack_end(w)
 
+    # ── Toolbar verticale droite (boutons d'action) ────────────────────────────
     def _build_toolbar(self, root):
         """Barre d'icônes verticale à droite de la zone de chat."""
         pass  # injectée dans _build_main via overlay
 
     # ── Sidebar ───────────────────────────────────────────────
+    # ── Construction du panneau historique gauche (sidebar) ───────────────────
     def _build_sidebar(self):
         self.sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.sidebar.add_css_class("sidebar")
@@ -373,6 +396,7 @@ class Win(Gtk.ApplicationWindow):
         db.connect("clicked", self._del_session, name); box.append(db)
         row.set_child(box); self.sess_list.append(row)
 
+    # ── Affiche/masque le panneau historique ──────────────────────────────────
     def _toggle_sidebar(self, *_):
         self.sidebar.set_visible(not self.sidebar.get_visible())
 
@@ -395,6 +419,7 @@ class Win(Gtk.ApplicationWindow):
         self.status.set_text(f"Session : {self.session_name}")
         GLib.idle_add(self.msg_tv.grab_focus)
 
+    # ── Démarre une nouvelle conversation vide ────────────────────────────────
     def _new_session(self, *_):
         try:
             if self.history:
@@ -411,6 +436,7 @@ class Win(Gtk.ApplicationWindow):
             print(f"ERREUR _new_session: {e}")
 
     # ── Zone principale ───────────────────────────────────────
+    # ── Construction de la zone principale (config + chat + input) ────────────
     def _build_main(self, root):
         # Conteneur horizontal : zone principale + toolbar verticale
         hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -422,23 +448,38 @@ class Win(Gtk.ApplicationWindow):
         # Config
         cfg = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         cfg.add_css_class("cfg")
-        for lbl_txt, attr, vis, hint in [
-            ("Clé API :", "key", False, "sk-..."),
-            ("System :", "sys", True, "Instructions permanentes pour le modèle"),
-        ]:
-            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-            l = Gtk.Label(label=lbl_txt); l.add_css_class("lbl"); l.set_size_request(65,-1)
-            buf = Gtk.TextBuffer()
-            tv  = Gtk.TextView(buffer=buf)
-            tv.set_wrap_mode(Gtk.WrapMode.WORD_CHAR); tv.set_accepts_tab(False)
-            tv.set_size_request(-1, 34); tv.set_hexpand(True)
-            tv.set_top_margin(6); tv.set_bottom_margin(6)
-            tv.set_left_margin(6); tv.set_right_margin(6)
-            wrap = Gtk.Box(); wrap.add_css_class("input-tv"); wrap.set_hexpand(True); wrap.append(tv)
-            row.append(l); row.append(wrap); cfg.append(row)
-            setattr(self, f"{attr}_buf", buf); setattr(self, f"{attr}_tv", tv)
 
-        self.sys_buf.set_text("Tu es un assistant serviable.")
+        # Clé API
+        row_key = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        l_key = Gtk.Label(label="Clé API :"); l_key.add_css_class("lbl"); l_key.set_size_request(65,-1)
+        buf = Gtk.TextBuffer()
+        tv = Gtk.TextView(buffer=buf)
+        tv.set_wrap_mode(Gtk.WrapMode.WORD_CHAR); tv.set_accepts_tab(False)
+        tv.set_size_request(-1, 34); tv.set_hexpand(True)
+        tv.set_top_margin(6); tv.set_bottom_margin(6)
+        tv.set_left_margin(6); tv.set_right_margin(6)
+        wrap_key = Gtk.Box(); wrap_key.add_css_class("input-tv"); wrap_key.set_hexpand(True); wrap_key.append(tv)
+        row_key.append(l_key); row_key.append(wrap_key); cfg.append(row_key)
+        self.key_buf = buf; self.key_tv = tv
+
+        # Persona — label + bouton édition (Wayland workaround)
+        row_sys = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        l_sys = Gtk.Label(label="Persona :"); l_sys.add_css_class("lbl"); l_sys.set_size_request(65,-1)
+        self.sys_buf = Gtk.TextBuffer()
+        self.sys_buf.set_text("Tu es un assistant serviable et précis.")
+        self.sys_lbl = Gtk.Label()
+        self.sys_lbl.set_hexpand(True); self.sys_lbl.set_xalign(0)
+        self.sys_lbl.set_ellipsize(3)  # PANGO_ELLIPSIZE_END
+        self.sys_lbl.add_css_class("lbl")
+        self.sys_lbl.set_tooltip_text("Décris le rôle souhaité — ex: «Tu es un expert Linux Fedora» · «Tu es un professeur patient» · «Tu es un développeur Python senior»")
+        self._update_sys_lbl()
+        self.sys_buf.connect("changed", lambda b: self._update_sys_lbl())
+        btn_edit_sys = Gtk.Button(label="✏️")
+        btn_edit_sys.add_css_class("tool"); btn_edit_sys.set_focusable(False)
+        btn_edit_sys.set_tooltip_text("Modifier le persona")
+        btn_edit_sys.connect("clicked", self._edit_persona)
+        row_sys.append(l_sys); row_sys.append(self.sys_lbl); row_sys.append(btn_edit_sys)
+        cfg.append(row_sys)
 
         r2 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         l2 = Gtk.Label(label="Modèle :"); l2.add_css_class("lbl"); l2.set_size_request(65,-1)
@@ -630,6 +671,7 @@ class Win(Gtk.ApplicationWindow):
         # Notebook avec onglet Chat + onglet Terminal
         self.paned.set_end_child(hbox)
 
+    # ── Éditeur de code indépendant (GtkSourceView + exécution) ──────────────
     def _open_editor_window(self, *_):
         """Ouvre l'éditeur dans une fenêtre indépendante."""
         if hasattr(self, '_editor_win') and self._editor_win and self._editor_win.is_visible():
@@ -1234,6 +1276,7 @@ class Win(Gtk.ApplicationWindow):
             None, None, -1, None, None
         )
 
+    # ── Barre de statut (bas de fenêtre) : status + copyright + stats tokens ──
     def _build_statusbar(self, root):
         bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
         bar.set_margin_start(12); bar.set_margin_end(12)
@@ -1268,6 +1311,7 @@ class Win(Gtk.ApplicationWindow):
         GLib.idle_add(self.stats_lbl.set_markup, markup)
 
     # ── Raccourcis clavier ────────────────────────────────────
+    # ── Raccourcis clavier globaux ────────────────────────────────────────────
     def _setup_shortcuts(self):
         # Raccourcis clavier sur la zone chat uniquement (pas le terminal)
         kc = Gtk.EventControllerKey()
@@ -1337,6 +1381,7 @@ class Win(Gtk.ApplicationWindow):
         self.status.set_text(f"✅ Fichier prêt : {name}")
         return True
 
+    # ── Fenêtre d'aide contextuelle ────────────────────────────────────────────
     def _show_help(self, *_):
         dlg = Gtk.Window(title="Aide — Nseek")
         dlg.set_default_size(580, 620)
@@ -1386,7 +1431,7 @@ class Win(Gtk.ApplicationWindow):
             ("⚙️ OPTIONS", [
                 ("<b>🧠 Thinking</b>", "Raisonnement interne visible"),
                 ("<b>⚡ Streaming</b>", "Réponse au fil de l'eau"),
-                ("<b>System</b>", "Instruction permanente"),
+                ("<b>🎭 Persona ✏️</b>", "Rôle/comportement de l'IA — cliquer ✏️ pour modifier"),
                 ("<b>🗣️ Langue</b>", "Langue de réponse (10 langues disponibles)"),
                 ("<b>A+ / A-</b>", "Taille de la police"),
             ]),
@@ -1522,6 +1567,7 @@ class Win(Gtk.ApplicationWindow):
         if self.font_size > 8:
             self.font_size -= 1; self._apply_font()
 
+    # ── Insertion de texte dans le buffer de chat ─────────────────────────────
     def _ins(self, text, *tags):
         it = self.buf.get_end_iter()
         if tags: self.buf.insert_with_tags_by_name(it, text, *tags)
@@ -1530,6 +1576,7 @@ class Win(Gtk.ApplicationWindow):
     def _scroll(self):
         self.view.scroll_to_iter(self.buf.get_end_iter(), 0, False, 0, 1)
 
+    # ── Rendu markdown simplifié + détection blocs de code ───────────────────
     def _render(self, text):
         for p in re.split(r'(```[\w]*\n.*?```)', text, flags=re.DOTALL):
             if p.startswith('```'):
@@ -1660,6 +1707,7 @@ class Win(Gtk.ApplicationWindow):
         self.status.set_text(f"✅ Code {lang or ''} copié — utilise ⚡ Terminal pour l'exécuter")
         GLib.timeout_add(2000, lambda: btn.set_label(original) or False)
 
+    # ── Affichage d'un message dans le chat (vous/IA/erreur/info) ─────────────
     def _msg(self, kind, text, thinking=""):
         if kind == "you":   self._ins("\n🧑 Toi\n", "you")
         elif kind == "ai":  self._ins("\n🤖 DeepSeek\n", "ai")
@@ -1670,6 +1718,7 @@ class Win(Gtk.ApplicationWindow):
         self._render(text); self._ins("\n","body"); GLib.idle_add(self._scroll)
 
     # ── Thème ─────────────────────────────────────────────────
+    # ── Bascule thème clair/sombre et met à jour le filigrane ─────────────────
     def _switch_theme(self, *_):
         self.is_dark = not self.is_dark
         self.css_provider.load_from_string(CSS_DARK if self.is_dark else CSS_LIGHT)
@@ -1825,6 +1874,7 @@ class Win(Gtk.ApplicationWindow):
         return False  # Pas de live-search pour éviter les crashs
 
     # ── Copier ────────────────────────────────────────────────
+    # ── Impression de la conversation via GTK PrintOperation ─────────────────
     def _print_conv(self, *_):
         """Imprime la conversation via la boîte de dialogue d'impression GTK."""
         op = Gtk.PrintOperation()
@@ -1856,6 +1906,7 @@ class Win(Gtk.ApplicationWindow):
         except Exception as e:
             self.status.set_text(f"Impression : {e}")
 
+    # ── Régénère la dernière réponse de l'IA ──────────────────────────────────
     def _regenerate(self, *_):
         if not self.history:
             self.status.set_text("⚠️ Aucune conversation à régénérer."); return
@@ -1870,6 +1921,80 @@ class Win(Gtk.ApplicationWindow):
         self.status.set_text("🔄 Régénération en cours...")
         self._send(regenerate=True)
 
+    def _update_sys_lbl(self):
+        txt = self.sys_buf.get_text(self.sys_buf.get_start_iter(), self.sys_buf.get_end_iter(), False)
+        self.sys_lbl.set_text(txt if txt else "—")
+
+    # ── Dialogue d'édition du Persona (surface Wayland indépendante) ──────────
+    def _edit_persona(self, *_):
+        """Dialogue d'édition du persona (fenêtre séparée pour focus Wayland)."""
+        dlg = Gtk.Window(title="Nseek — Modifier le Persona")
+        dlg.set_default_size(580, 280)
+        dlg.set_transient_for(self)
+        dlg.set_modal(True)
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.set_margin_top(16); box.set_margin_bottom(16)
+        box.set_margin_start(16); box.set_margin_end(16)
+
+        # En-tête
+        hdr = Gtk.Label()
+        hdr.set_markup('<b>🎭 Persona</b> — Définit le rôle et le comportement de l\'IA')
+        hdr.set_xalign(0); hdr.add_css_class("lbl")
+        box.append(hdr)
+
+        # Exemples
+        ex = Gtk.Label()
+        ex.set_markup('<span font="9" foreground="#4a7aaa">Exemples : «Tu es un expert Linux Fedora» · «Tu es un professeur patient» · «Tu es un développeur Python senior» · «Tu es un traducteur»</span>')
+        ex.set_wrap(True); ex.set_xalign(0)
+        box.append(ex)
+
+        # Zone de texte éditable
+        edit_buf = Gtk.TextBuffer()
+        current = self.sys_buf.get_text(self.sys_buf.get_start_iter(), self.sys_buf.get_end_iter(), False)
+        edit_buf.set_text(current)
+        edit_tv = Gtk.TextView(buffer=edit_buf)
+        edit_tv.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        edit_tv.set_top_margin(8); edit_tv.set_left_margin(8)
+        edit_tv.set_right_margin(8); edit_tv.set_bottom_margin(8)
+        edit_tv.set_hexpand(True); edit_tv.set_vexpand(True)
+        sw = Gtk.ScrolledWindow(); sw.set_child(edit_tv)
+        sw.set_hexpand(True); sw.set_vexpand(True)
+        sw.set_size_request(-1, 100)
+        sw.add_css_class("input-tv")
+        box.append(sw)
+
+        # Boutons
+        btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        spacer = Gtk.Box(); spacer.set_hexpand(True); btn_box.append(spacer)
+
+        btn_cancel = Gtk.Button(label="Annuler"); btn_cancel.add_css_class("tool")
+        btn_cancel.set_focusable(False)
+        btn_cancel.connect("clicked", lambda *_: dlg.destroy())
+        btn_box.append(btn_cancel)
+
+        btn_ok = Gtk.Button(label="✅ Valider"); btn_ok.add_css_class("send")
+        btn_ok.set_focusable(False)
+        def _validate(*_):
+            txt = edit_buf.get_text(edit_buf.get_start_iter(), edit_buf.get_end_iter(), False)
+            self.sys_buf.set_text(txt)
+            dlg.destroy()
+        btn_ok.connect("clicked", _validate)
+        btn_box.append(btn_ok)
+        box.append(btn_box)
+
+        # Touche Échap pour fermer
+        kc = Gtk.EventControllerKey()
+        kc.connect("key-pressed", lambda c,k,kc2,s: dlg.destroy() or True if k==65307 else False)
+        dlg.add_controller(kc)
+
+        dlg.set_child(box)
+        dlg.present()
+        GLib.timeout_add(100, lambda: edit_tv.grab_focus() or False)
+
+    def _on_sys_key(self, ctrl, kv, kc, st, tv):
+        return False
+
     def _copy_reply(self, *_):
         for m in reversed(self.history):
             if m['role'] == 'assistant':
@@ -1883,6 +2008,7 @@ class Win(Gtk.ApplicationWindow):
         self.status.set_text("Aucune réponse à copier.")
 
     # ── Exporter ──────────────────────────────────────────────
+    # ── Exporte la conversation en .txt dans ~/Documents ──────────────────────
     def _export(self, *_):
         if not self.history:
             self.status.set_text("Rien à exporter."); return
@@ -1914,6 +2040,8 @@ class Win(Gtk.ApplicationWindow):
         self._msg("info","Conversation effacée."); self.msg_tv.grab_focus()
 
     # ── Envoi ─────────────────────────────────────────────────
+    # ── Envoi d'un message à l'API DeepSeek ──────────────────────────────────
+    # regenerate=True : renvoie l'historique sans nouveau message
     def _send(self, *_, regenerate=False):
         import threading
         key  = self._get_key()
@@ -1968,6 +2096,7 @@ class Win(Gtk.ApplicationWindow):
         fn = self._call_stream if stream else self._call_sync
         threading.Thread(target=fn, args=(key,model,think,messages), daemon=True).start()
     # ── API Streaming ─────────────────────────────────────────
+    # ── Appel API en mode streaming (thread séparé) ───────────────────────────
     def _call_stream(self, key, model, think, messages):
         body = {"model":model,"messages":messages,"max_tokens":4096,"stream":True,
                 "stream_options":{"include_usage":True}}
@@ -2073,6 +2202,7 @@ class Win(Gtk.ApplicationWindow):
             GLib.idle_add(self.msg_tv.grab_focus)
 
     # ── API Sync ──────────────────────────────────────────────
+    # ── Appel API en mode synchrone (thread séparé) ──────────────────────────
     def _call_sync(self, key, model, think, messages):
         body = {"model":model,"messages":messages,"max_tokens":4096}
         if think: body["thinking"]={"type":"enabled"}; body["reasoning_effort"]="medium"
@@ -2113,6 +2243,9 @@ class Win(Gtk.ApplicationWindow):
         self._refresh_stats(in_tok, out_tok, cost)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Application GTK4 — point d'entrée, gère le splash screen puis lance Win
+# ─────────────────────────────────────────────────────────────────────────────
 class App(Gtk.Application):
     def __init__(self):
         super().__init__(application_id="fr.local.nseek")
@@ -2120,6 +2253,7 @@ class App(Gtk.Application):
     def do_activate(self):
         self._show_splash()
 
+    # ── Écran de démarrage animé avec logo et barre de progression ───────────
     def _show_splash(self):
         splash = Gtk.Window(title="Nseek")
         splash.set_default_size(860, 460)
@@ -2183,6 +2317,7 @@ class App(Gtk.Application):
         self._main_win = Win(self)
         GLib.timeout_add(55, self._update_progress)
 
+    # ── Animation de la barre de progression du splash ────────────────────────
     def _update_progress(self):
         self._progress_val += 0.022
         self._progress.set_fraction(min(self._progress_val, 1.0))
@@ -2192,4 +2327,5 @@ class App(Gtk.Application):
             return False
         return True
 
+# ── Point d'entrée principal ─────────────────────────────────────────────────
 if __name__ == "__main__": App().run()
