@@ -27,6 +27,6 @@
 <text x="358" y="158" font-family="sans-serif" font-weight="bold" font-size="88" letter-spacing="-2" fill="#1a6bb5">Nseek</text>
 <text x="361" y="192" font-family="sans-serif" font-size="17" fill="#4a9fd4">client IA natif Linux</text>
 <rect x="361" y="200" width="185" height="2" rx="1" fill="#2d8fe0" opacity="0.4"/>
-<text x="361" y="222" font-family="sans-serif" font-size="13" fill="#6a8aaa">powered by DeepSeek V4</text>
-<text x="361" y="242" font-family="sans-serif" font-size="12" font-weight="bold" fill="#5ab4f0">🐋 © 2026 carafife — Nseek v1.0 — GPL v3</text>
+<text x="361" y="222" font-family="sans-serif" font-size="16" font-weight="bold" fill="#7aaad0">powered by DeepSeek V4</text>
+<text x="361" y="248" font-family="sans-serif" font-size="14" font-weight="bold" fill="#90d8ff">🐋 © 2026 carafife — Nseek v1.0 — GPL v3</text>
 </svg>

@@ -78,7 +78,7 @@ headerbar { background:#080f1e; border-bottom:1px solid #152238; }
 headerbar windowcontrols button { background:transparent; }
 .app-title { font-weight:bold; font-size:12pt; color:#c8ddf0; letter-spacing:2px; }
 .app-sub   { font-size:9pt; color:#2a5a9a; letter-spacing:3px; }
-.sidebar { background:#060d1a; border-right:1px solid #152238; min-width:200px; }
+.sidebar { background:#060d1a; border-right:1px solid #152238; min-width:300px; }
 .sidebar-title { color:#4a8ac0; font-size:9pt; font-weight:bold; padding:10px 12px 8px; letter-spacing:3px; border-bottom:1px solid #152238; margin-bottom:4px; }
 .cfg     { background:#09142a; padding:8px 10px; margin:0 10px 6px; border-radius:6px; border:1px solid #152238; }
 .lbl     { color:#2a5a9a; font-size:10pt; }
@@ -97,20 +97,21 @@ textview text { background:#060d1a; color:#c8ddf0; }
 .sess-name { color:#7aaad0; font-size:10pt; }
 .del-btn { background:transparent; color:#152238; border-radius:5px; padding:2px 6px; font-size:10pt; border:none; }
 .del-btn:hover { background:#1a0a0a; color:#e05555; }
-.new-sess { background:#09142a; color:#4a8ac0; border-radius:0; padding:10px 12px; font-size:10pt; border:none; border-bottom:1px solid #152238; border-top:1px solid #152238; letter-spacing:1px; outline:none; box-shadow:none; }
-.new-sess:hover { background:#0d1f3c; color:#7aaad0; }
-.new-sess:focus { outline:none; box-shadow:none; border:none; border-bottom:1px solid #152238; border-top:1px solid #152238; }
+.new-sess { background:#0d1f3c; color:#60a5fa; border-radius:0; padding:10px 12px; font-size:11pt; font-weight:bold; border:none; border-bottom:1px solid #1e3a5f; border-top:1px solid #1e3a5f; letter-spacing:1px; outline:none; box-shadow:none; }
+.new-sess:hover { background:#152238; color:#93c5fd; }
+.new-sess:focus { outline:none; box-shadow:none; border:none; border-bottom:1px solid #1e3a5f; border-top:1px solid #1e3a5f; }
 .status { color:#1e3a5f; font-size:9pt; padding:2px 12px 4px; }
 .search-bar { background:#060d1a; padding:4px 10px; border-bottom:1px solid #152238; }
-.toggle, .theme-btn, .web-btn, .hdr-btn { background:transparent; color:#2a5a9a; border-radius:5px; padding:4px 9px; border:none; }
+.toggle { background:#0d1f3c; color:#60a5fa; border-radius:5px; padding:4px 10px; border:1px solid #1e3a5f; font-size:13pt; font-weight:bold; }
+.theme-btn, .web-btn, .hdr-btn { background:transparent; color:#2a5a9a; border-radius:5px; padding:4px 9px; border:none; }
 .toggle:hover, .theme-btn:hover, .web-btn:hover, .hdr-btn:hover { background:#09142a; color:#7aaad0; }
-.quit-btn { background:transparent; color:#c04040; border-radius:5px; padding:4px 9px; border:none; font-weight:bold; }
-.quit-btn:hover { background:#1a0808; color:#e05555; }
+.quit-btn { background:transparent; color:#fbbf24; border:none; font-weight:bold; font-size:13pt; padding:4px 10px; }
+.quit-btn:hover { background:transparent; color:#fcd34d; }
 .vtoolbar { background:#060d1a; border-left:1px solid #152238; }
 .vtool { background:transparent; color:#2a5a9a; border-radius:5px; padding:6px; border:none; font-size:14pt; min-width:36px; }
 .vtool:hover { background:#09142a; color:#7aaad0; }
-.vtool.quit-btn { color:#c04040; }
-.vtool.quit-btn:hover { background:#1a0808; color:#e05555; }
+.vtool-quit { background:transparent; color:#f66151; border-radius:5px; padding:6px; border:none; font-size:14pt; min-width:36px; }
+.vtool-quit:hover { background:#3a1a1a; color:#ff8070; }
 notebook { background:#060d1a; }
 notebook header { background:#080f1e; border-bottom:2px solid #152238; }
 notebook header tabs tab { background:#080f1e; color:#2a5a9a; padding:6px 16px; border:none; border-bottom:2px solid transparent; }
@@ -139,7 +140,7 @@ headerbar { background:#e8e8e2; border-bottom:1px solid #c8c8c0; }
 headerbar windowcontrols button { background:transparent; }
 .app-title { font-weight:bold; font-size:12pt; color:#0d2545; letter-spacing:2px; }
 .app-sub   { font-size:9pt; color:#2a5a9a; letter-spacing:3px; }
-.sidebar { background:#eeede8; border-right:1px solid #c8c8c0; min-width:200px; }
+.sidebar { background:#eeede8; border-right:1px solid #c8c8c0; min-width:300px; }
 .sidebar-title { color:#1a4f8a; font-size:9pt; font-weight:bold; padding:10px 12px 8px; letter-spacing:3px; border-bottom:1px solid #c8c8c0; }
 .cfg     { background:#e8e8e2; padding:8px 10px; margin:0 10px 6px; border-radius:6px; border:1px solid #c8c8c0; }
 .lbl     { color:#1a4f8a; font-size:10pt; }
@@ -158,14 +159,15 @@ textview text { background:#f5f5f0; color:#0d1e35; }
 .sess-name { color:#0d2545; font-size:10pt; }
 .del-btn { background:transparent; color:#c0bdb8; border-radius:5px; padding:2px 6px; font-size:10pt; border:none; }
 .del-btn:hover { background:#fde8e8; color:#c01c28; }
-.new-sess { background:#eeede8; color:#1a4f8a; border-radius:0; padding:10px 12px; font-size:10pt; border:none; border-bottom:1px solid #c8c8c0; border-top:1px solid #c8c8c0; letter-spacing:1px; }
-.new-sess:hover { background:#e8e8e2; color:#0d2545; }
+.new-sess { background:#e0ecf8; color:#1a4f8a; border-radius:0; padding:10px 12px; font-size:11pt; font-weight:bold; border:none; border-bottom:1px solid #a0c0e0; border-top:1px solid #a0c0e0; letter-spacing:1px; }
+.new-sess:hover { background:#cce0f5; color:#0d2545; }
 .status { color:#4a7aaa; font-size:9pt; padding:2px 12px 4px; }
 .search-bar { background:#eeede8; padding:4px 10px; border-bottom:1px solid #c8c8c0; }
-.toggle, .theme-btn, .web-btn, .hdr-btn { background:transparent; color:#1a4f8a; border-radius:5px; padding:4px 9px; border:none; }
+.toggle { background:#d8e8f8; color:#1a4f8a; border-radius:5px; padding:4px 10px; border:1px solid #a0c0e0; font-size:13pt; font-weight:bold; }
+.theme-btn, .web-btn, .hdr-btn { background:transparent; color:#1a4f8a; border-radius:5px; padding:4px 9px; border:none; }
 .toggle:hover, .theme-btn:hover, .web-btn:hover, .hdr-btn:hover { background:#d8d8d2; color:#0d2545; }
-.quit-btn { background:transparent; color:#c01c28; border-radius:5px; padding:4px 9px; border:none; font-weight:bold; }
-.quit-btn:hover { background:#fde8e8; color:#a0001a; }
+.quit-btn { background:transparent; color:#b45309; border-radius:5px; padding:4px 9px; border:none; font-weight:bold; font-size:14pt; }
+.quit-btn:hover { background:#fef3c7; color:#92400e; }
 .vtoolbar { background:#e8e8e2; border-left:1px solid #c8c8c0; }
 .vtool { background:transparent; color:#1a4f8a; border-radius:5px; padding:6px; border:none; font-size:14pt; min-width:36px; }
 .vtool:hover { background:#d8d8d2; color:#0d2545; }
@@ -216,6 +218,7 @@ class Win(Gtk.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app, title="Nseek")
         self.set_default_size(960, 700)
+        self.maximize()
         self.history       = []
         self.session_name  = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
         self.attached_file = None
@@ -271,7 +274,7 @@ class Win(Gtk.ApplicationWindow):
     # ── HeaderBar ────────────────────────────────────────────
     def _build_headerbar(self):
         hb = Gtk.HeaderBar()
-        hb.set_show_title_buttons(True)
+        hb.set_show_title_buttons(False)  # cacher les boutons GNOME
         self.set_titlebar(hb)
 
         # Gauche : sidebar toggle
@@ -305,6 +308,13 @@ class Win(Gtk.ApplicationWindow):
         btn_web.set_tooltip_text("Ouvrir DeepSeek Web  [Ctrl+B]")
         btn_web.connect("clicked", self._open_web)
 
+        # ✕ en premier = tout à droite
+        quit_btn = Gtk.Button(label="✕")
+        quit_btn.add_css_class("quit-btn"); quit_btn.set_focusable(False)
+        quit_btn.set_tooltip_text("Quitter Nseek  [Ctrl+Q]")
+        quit_btn.connect("clicked", self._quit)
+        hb.pack_end(quit_btn)
+
         for w in [btn_credits, btn_web]:
             hb.pack_end(w)
 
@@ -332,7 +342,7 @@ class Win(Gtk.ApplicationWindow):
         sw.set_child(self.sess_list)
         self.sidebar.append(sw)
         self.paned.set_start_child(self.sidebar)
-        self.paned.set_position(210)
+        self.paned.set_position(300)
         self._refresh_sidebar()
 
     def _refresh_sidebar(self):
@@ -609,7 +619,7 @@ class Win(Gtk.ApplicationWindow):
                     toolbar.append(spacer)
                     self.theme_btn = btn
                 btn.add_css_class("vtool")
-                if lbl == "✕": btn.add_css_class("quit-btn")
+                if lbl == "✕": btn.remove_css_class("vtool"); btn.add_css_class("vtool-quit")
                 btn.set_focusable(False); btn.set_tooltip_text(tip)
                 btn.connect("clicked", cb)
                 toolbar.append(btn)
@@ -2149,6 +2159,16 @@ class App(Gtk.Application):
 
         lbl = Gtk.Label(label="Chargement…"); lbl.add_css_class("splash-loading")
         box.append(lbl)
+
+        # Powered by
+        pw_lbl = Gtk.Label()
+        pw_lbl.set_markup('<span font="12" font_weight="bold" foreground="#7aaad0">powered by DeepSeek V4</span>')
+        box.append(pw_lbl)
+
+        # Copyright
+        copy_lbl = Gtk.Label()
+        copy_lbl.set_markup('<span font="11" font_weight="bold" foreground="#90d8ff">🐋 © 2026 carafife — Nseek v1.0 — GPL v3</span>')
+        box.append(copy_lbl)
 
         splash.present()
         self._splash = splash

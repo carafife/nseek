@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 
-svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 310">
+svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 330">
 <defs>
 <linearGradient id="wg" x1="0%" y1="0%" x2="100%" y2="100%">
 <stop offset="0%" stop-color="#5ab4f0"/><stop offset="100%" stop-color="#1a6bb5"/></linearGradient>
@@ -30,7 +30,8 @@ svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 310">
 <text x="358" y="158" font-family="sans-serif" font-weight="bold" font-size="88" letter-spacing="-2" fill="#1a6bb5">Nseek</text>
 <text x="361" y="192" font-family="sans-serif" font-size="17" fill="#4a9fd4">client IA natif Linux</text>
 <rect x="361" y="200" width="185" height="2" rx="1" fill="#2d8fe0" opacity="0.4"/>
-<text x="361" y="222" font-family="sans-serif" font-size="13" fill="#6a8aaa">powered by DeepSeek V4</text>
+<text x="361" y="222" font-family="sans-serif" font-size="16" font-weight="bold" fill="#7aaad0">powered by DeepSeek V4</text>
+<text x="361" y="248" font-family="sans-serif" font-size="14" font-weight="bold" fill="#90d8ff">🐋 © 2026 carafife — Nseek v1.0 — GPL v3</text>
 </svg>'''
 
 os.makedirs(os.path.expanduser('~/Programmes/assets'), exist_ok=True)
@@ -43,7 +44,7 @@ try:
     import cairosvg
     cairosvg.svg2png(bytestring=svg.encode(),
                      write_to=os.path.expanduser('~/Programmes/assets/nseek-logo.png'),
-                     output_width=680, output_height=310)
+                     output_width=680, output_height=330)
     print("PNG créé !")
 except Exception as e:
     print(f"PNG ignoré : {e}")
