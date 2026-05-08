@@ -639,7 +639,9 @@ class Win(Gtk.ApplicationWindow):
             ("🔄", "Régénérer la dernière réponse", self._regenerate),
             ("🗑",  "Effacer  [Ctrl+L]",              self._clear),
             None,
-            ("❓", "Aide",                            self._show_help),
+            ("❓", "Aide contextuelle",               self._show_help),
+            ("Doc", "Manuel utilisateur",             self._open_manual),
+            None,
             ("✏️", "Éditeur de code  [Ctrl+Shift+E]", self._open_editor_window),
             None,
             ("☀️", "Thème clair/sombre  [Ctrl+T]",   self._switch_theme),
@@ -1382,6 +1384,292 @@ class Win(Gtk.ApplicationWindow):
         return True
 
     # ── Fenêtre d'aide contextuelle ────────────────────────────────────────────
+    def _open_manual(self, *_):
+        """Ouvre le manuel utilisateur — le génère si absent."""
+        base = os.path.dirname(os.path.abspath(__file__))
+        docs_dir = os.path.join(base, "docs")
+        os.makedirs(docs_dir, exist_ok=True)
+        manuel = os.path.join(docs_dir, "manuel.html")
+        theme = "dark" if self.is_dark else "light"
+        # Générer le fichier s'il n'existe pas
+        if not os.path.exists(manuel):
+            self._generate_manual(manuel)
+        uri = f"file://{manuel}?theme={theme}"
+        try:
+            Gio.AppInfo.launch_default_for_uri(uri, None)
+        except Exception as e:
+            self.status.set_text(f"Erreur ouverture manuel : {e}")
+
+    def _generate_manual(self, path):
+        """Génère le manuel HTML dans le fichier indiqué."""
+        html = '''<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nseek — Manuel Utilisateur</title>
+<style>
+:root{--bg:#060d1a;--bg2:#0a1628;--bg3:#0d1f3c;--bd:#152238;--ac:#2a5a9a;--ac2:#4a8fd4;--ci:#7aaad0;--tx:#e0eeff;--mu:#4a7aaa;--gr:#34d399;--ye:#fbbf24;--re:#f87171;--cb:#0a1628}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:\'Segoe UI\',sans-serif;font-size:15px;line-height:1.7}
+body.light{--bg:#f5f5f0;--bg2:#eeede8;--bg3:#e8e8e2;--bd:#c8c8c0;--ac:#1a4f8a;--ac2:#2a6aaa;--ci:#1a4f8a;--tx:#0d1e35;--mu:#4a7aaa;--gr:#1a7a4a;--ye:#b45309;--re:#c01c28;--cb:#dde3ec}
+header{background:linear-gradient(135deg,var(--bg),var(--bg3),var(--bg));border-bottom:1px solid var(--bd);padding:3rem 2rem 2rem;text-align:center}
+.logo{font-size:3rem;font-weight:700;color:var(--ci);letter-spacing:-2px}
+.logo span{color:var(--ac2)}
+.sub{font-size:.8rem;letter-spacing:4px;color:var(--ac2);margin:.25rem 0}
+.pow{font-size:.75rem;color:var(--mu);margin:.25rem 0}
+.badge{display:inline-block;background:var(--bg3);border:1px solid var(--bd);color:var(--ci);font-size:.7rem;padding:.2rem .8rem;border-radius:20px;margin:.75rem 0}
+.theme-btn{background:var(--bg3);border:1px solid var(--bd);color:var(--ci);padding:.3rem .8rem;border-radius:20px;cursor:pointer;font-size:.75rem;margin:.5rem 0}
+.wrap{max-width:920px;margin:0 auto;padding:2rem}
+.toc{background:var(--bg2);border:1px solid var(--bd);border-left:3px solid var(--ac);border-radius:8px;padding:1.5rem;margin:2rem 0}
+.toc h2{color:var(--ac2);font-size:.8rem;letter-spacing:3px;margin-bottom:.75rem}
+.toc a{color:var(--ci);text-decoration:none;font-size:.9rem}
+.toc a:hover{color:var(--tx)}
+.toc ol{padding-left:1.5rem}
+.toc li{margin:.25rem 0}
+section{margin:3rem 0}
+.sh{display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;padding-bottom:.75rem;border-bottom:1px solid var(--bd)}
+.si{font-size:1.4rem}
+.st{font-size:1.3rem;font-weight:700;color:var(--ci)}
+.sn{font-size:.7rem;color:var(--ac);margin-left:auto;background:var(--bg3);padding:.15rem .5rem;border-radius:4px;border:1px solid var(--bd)}
+p{margin:.6rem 0}
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:1.25rem 1.5rem;margin:.75rem 0}
+.ct{font-weight:700;color:var(--ac2);margin-bottom:.5rem;font-size:.9rem}
+ul{padding-left:1.5rem;color:var(--ci)}
+li{margin:.2rem 0}
+.note{background:rgba(42,90,154,.15);border-left:3px solid var(--ac);padding:.75rem 1rem;margin:.75rem 0;font-size:.9rem;border-radius:0 6px 6px 0}
+.tip{background:rgba(52,211,153,.1);border-left:3px solid var(--gr);padding:.75rem 1rem;margin:.75rem 0;font-size:.9rem;border-radius:0 6px 6px 0}
+.warn{background:rgba(251,191,36,.1);border-left:3px solid var(--ye);padding:.75rem 1rem;margin:.75rem 0;font-size:.9rem;border-radius:0 6px 6px 0}
+code{font-family:monospace;background:var(--cb);border:1px solid var(--bd);color:var(--ci);padding:.1rem .4rem;border-radius:4px;font-size:.85rem}
+pre{background:var(--cb);border:1px solid var(--bd);border-radius:6px;padding:1rem;margin:.75rem 0;overflow-x:auto;font-family:monospace;font-size:.85rem;color:var(--ci)}
+kbd{background:var(--bg3);border:1px solid var(--ac);color:var(--ci);font-family:monospace;font-size:.75rem;padding:.15rem .5rem;border-radius:4px}
+.sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.6rem;margin:.75rem 0}
+.si2{background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:.5rem .9rem;display:flex;align-items:center;gap:.6rem;font-size:.85rem}
+.lg{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.4rem;margin:.75rem 0}
+.li{background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:.4rem .75rem;font-size:.9rem}
+.wf{display:flex;flex-direction:column;margin:.75rem 0}
+.ws{display:flex;align-items:flex-start;gap:1rem;padding:.6rem 0;border-left:2px solid var(--bd);padding-left:1.5rem;position:relative}
+.ws::before{content:attr(data-n);position:absolute;left:-13px;background:var(--ac);color:white;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700}
+.ws:last-child{border-left-color:transparent}
+.wt{font-weight:600;color:var(--ac2)}
+.wd{font-size:.85rem;color:var(--ci)}
+.pal{display:flex;gap:.5rem;flex-wrap:wrap;margin:.75rem 0}
+.sw{display:flex;flex-direction:column;align-items:center;gap:.2rem}
+.sb{width:55px;height:35px;border-radius:5px;border:1px solid var(--bd)}
+.sl{font-family:monospace;font-size:.6rem;color:var(--mu)}
+footer{border-top:1px solid var(--bd);padding:2rem;text-align:center;color:var(--mu);font-size:.85rem;margin-top:4rem}
+footer strong{color:var(--ci)}
+</style>
+</head>
+<body>
+<header>
+  <img id="logo-img" src="" alt="Nseek" style="max-width:580px;width:90%;height:auto;display:block;margin:0 auto 0.5rem">
+  <button class="theme-btn" id="tb">☀️ Thème clair</button>
+</header>
+<div class="wrap">
+  <nav class="toc">
+    <h2>📋 TABLE DES MATIÈRES</h2>
+    <ol>
+      <li><a href="#s1">Présentation</a></li>
+      <li><a href="#s2">Installation et démarrage</a></li>
+      <li><a href="#s3">Interface — Vue d\'ensemble</a></li>
+      <li><a href="#s4">Le Chat IA</a></li>
+      <li><a href="#s5">Le Persona</a></li>
+      <li><a href="#s6">Sélecteur de langue</a></li>
+      <li><a href="#s7">Historique des conversations</a></li>
+      <li><a href="#s8">L\'Éditeur de code</a></li>
+      <li><a href="#s9">Raccourcis clavier</a></li>
+      <li><a href="#s10">Toolbar verticale</a></li>
+      <li><a href="#s11">Thèmes clair / sombre</a></li>
+      <li><a href="#s12">Crédits et licences</a></li>
+    </ol>
+  </nav>
+
+  <section id="s1"><div class="sh"><span class="si">🐋</span><span class="st">Présentation</span><span class="sn">01</span></div>
+  <p><strong>Nseek</strong> est un client IA natif pour Linux, construit avec GTK4 et Python. Il permet d\'interagir avec les modèles <strong>DeepSeek V4</strong> directement depuis le bureau GNOME.</p>
+  <div class="card"><div class="ct">✨ Fonctionnalités clés</div><ul>
+  <li>Chat IA en streaming temps réel</li><li>Historique sauvegardé localement (JSON)</li>
+  <li>Éditeur de code avec coloration syntaxique (GtkSourceView 5)</li>
+  <li>Exécution du code depuis l\'éditeur</li><li>Persona configurable</li>
+  <li>Sélecteur de 10 langues</li><li>Pièces jointes (texte, PDF)</li>
+  <li>Thème clair et sombre</li><li>Impression des conversations</li>
+  </ul></div>
+  <div class="tip">Nseek fonctionne sur Linux avec GNOME/Wayland. Une clé API DeepSeek est requise.</div>
+  </section>
+
+  <section id="s2"><div class="sh"><span class="si">⚙️</span><span class="st">Installation et démarrage</span><span class="sn">02</span></div>
+  <div class="card"><div class="ct">📦 Dépendances</div>
+  <pre>dnf install python3-gobject gtk4 gtksourceview5 python3-pip
+pip install pypdf cairosvg --break-system-packages</pre></div>
+  <div class="card"><div class="ct">🚀 Lancement</div><pre>python3 ~/Programmes/nseek.py</pre></div>
+  <div class="card"><div class="ct">🔑 Clé API</div>
+  <p>Créez votre clé sur <code>platform.deepseek.com</code> et enregistrez-la dans :</p>
+  <pre>~/Documents/cle_deepseek_v4_api.txt</pre></div>
+  <div class="warn">Votre clé API est sensible — ne la partagez jamais.</div>
+  </section>
+
+  <section id="s3"><div class="sh"><span class="si">🖥️</span><span class="st">Interface — Vue d\'ensemble</span><span class="sn">03</span></div>
+  <div class="card"><div class="ct">🗺️ Structure</div>
+  <pre>┌────────────────────────────────────────────────────┐
+│  HeaderBar : Nseek  |  CLIENT IA NATIF GTK4  🌐 💳 ✕ │
+├─────────────┬──────────────────────────────┬───────┤
+│             │ Clé API / Persona / Modèle   │  🔍  │
+│ CONVERSATIONS│──────────────────────────────│  📋  │
+│             │                              │  💾  │
+│ + Nouvelle  │      Zone de Chat            │  🖨️  │
+│             │   (messages + blocs code)    │  ...  │
+│  Historique │──────────────────────────────│  Doc  │
+│             │  [📎] [Message...   ] 🗑 ➤   │  ✏️  │
+├─────────────┴──────────────────────────────┴───────┤
+│  Statut          © 2026 carafife     ⬆ ⬇ 💰        │
+└────────────────────────────────────────────────────┘</pre></div>
+  </section>
+
+  <section id="s4"><div class="sh"><span class="si">💬</span><span class="st">Le Chat IA</span><span class="sn">04</span></div>
+  <div class="card"><div class="ct">📤 Envoyer</div><ul>
+  <li><kbd>Entrée</kbd> — Envoyer le message</li>
+  <li><kbd>Maj+Entrée</kbd> — Saut de ligne</li></ul></div>
+  <div class="card"><div class="ct">🤖 Modèles</div><ul>
+  <li><strong>deepseek-v4-pro</strong> — Le plus puissant</li>
+  <li><strong>deepseek-v4-flash</strong> — Rapide et économique</li>
+  <li><strong>deepseek-chat</strong> — Modèle standard</li></ul></div>
+  <div class="card"><div class="ct">⚙️ Options</div><ul>
+  <li><strong>🧠 Thinking</strong> — Raisonnement interne visible</li>
+  <li><strong>⚡ Streaming</strong> — Réponse en temps réel</li></ul></div>
+  <div class="card"><div class="ct">💻 Blocs de code</div>
+  <p>Nseek détecte les blocs de code et les affiche avec coloration syntaxique et un bouton <strong>📋 Copier</strong>.</p></div>
+  </section>
+
+  <section id="s5"><div class="sh"><span class="si">🎭</span><span class="st">Le Persona</span><span class="sn">05</span></div>
+  <p>Le <strong>Persona</strong> est une instruction permanente définissant le rôle de l\'IA. Cliquez sur <strong>✏️</strong> pour le modifier.</p>
+  <div class="card"><div class="ct">💡 Exemples</div><ul>
+  <li><em>Tu es un expert Linux Fedora. Donne des réponses concises.</em></li>
+  <li><em>Tu es un professeur patient. Explique avec des analogies.</em></li>
+  <li><em>Tu es un développeur Python senior. Code pythonique.</em></li>
+  <li><em>Tu es un traducteur. Traduis sans commenter.</em></li></ul></div>
+  </section>
+
+  <section id="s6"><div class="sh"><span class="si">🗣️</span><span class="st">Sélecteur de langue</span><span class="sn">06</span></div>
+  <p>Choisissez la langue de réponse — l\'instruction est ajoutée automatiquement.</p>
+  <div class="lg">
+  <div class="li">🇫🇷 Français</div><div class="li">🇬🇧 English</div><div class="li">🇪🇸 Español</div>
+  <div class="li">🇨🇳 中文</div><div class="li">🇸🇦 العربية</div><div class="li">🇧🇷 Português</div>
+  <div class="li">🇷🇺 Русский</div><div class="li">🇩🇪 Deutsch</div><div class="li">🇯🇵 日本語</div>
+  <div class="li">🇮🇳 हिन्दी</div></div>
+  </section>
+
+  <section id="s7"><div class="sh"><span class="si">📚</span><span class="st">Historique des conversations</span><span class="sn">07</span></div>
+  <p>Sauvegardé dans <code>~/.local/share/deepseek-chat/</code> (JSON).</p>
+  <div class="card"><div class="ct">🗂️ Gestion</div><ul>
+  <li><strong>+ Nouvelle conversation</strong> — Démarre une session vierge</li>
+  <li>Cliquer sur une session — Recharge la conversation</li>
+  <li><strong>🗑</strong> — Supprime la session</li>
+  <li><kbd>Ctrl+H</kbd> — Affiche/masque le panneau</li></ul></div>
+  </section>
+
+  <section id="s8"><div class="sh"><span class="si">✏️</span><span class="st">L\'Éditeur de code</span><span class="sn">08</span></div>
+  <p>Cliquez sur <strong>✏️</strong> dans la toolbar pour ouvrir l\'éditeur.</p>
+  <div class="wf">
+  <div class="ws" data-n="1"><div><div class="wt">Demandez du code à DeepSeek</div><div class="wd">Posez votre question dans le chat</div></div></div>
+  <div class="ws" data-n="2"><div><div class="wt">Copiez le bloc</div><div class="wd">Cliquez 📋 Copier dans le bloc généré</div></div></div>
+  <div class="ws" data-n="3"><div><div class="wt">Collez dans l\'éditeur</div><div class="wd">✏️ → 📋 Coller le code</div></div></div>
+  <div class="ws" data-n="4"><div><div class="wt">Exécutez</div><div class="wd">▶ Exécuter — résultat affiché en bas</div></div></div>
+  <div class="ws" data-n="5"><div><div class="wt">Correction automatique</div><div class="wd">🤖 Demander correction → envoie l\'erreur à DeepSeek</div></div></div>
+  </div>
+  <div class="card"><div class="ct">🌐 Langages exécutables</div>
+  <p><code>python3</code> <code>bash</code> <code>javascript</code> <code>go</code></p></div>
+  </section>
+
+  <section id="s9"><div class="sh"><span class="si">⌨️</span><span class="st">Raccourcis clavier</span><span class="sn">09</span></div>
+  <div class="sg">
+  <div class="si2"><kbd>Ctrl+N</kbd><span>Nouvelle conversation</span></div>
+  <div class="si2"><kbd>Ctrl+L</kbd><span>Effacer</span></div>
+  <div class="si2"><kbd>Ctrl+F</kbd><span>Rechercher</span></div>
+  <div class="si2"><kbd>Ctrl+E</kbd><span>Exporter (.txt)</span></div>
+  <div class="si2"><kbd>Ctrl+H</kbd><span>Afficher/masquer historique</span></div>
+  <div class="si2"><kbd>Ctrl+T</kbd><span>Thème clair/sombre</span></div>
+  <div class="si2"><kbd>Ctrl+B</kbd><span>DeepSeek Web</span></div>
+  <div class="si2"><kbd>Ctrl+Q</kbd><span>Quitter</span></div>
+  <div class="si2"><kbd>Entrée</kbd><span>Envoyer le message</span></div>
+  <div class="si2"><kbd>Maj+Entrée</kbd><span>Saut de ligne</span></div>
+  </div>
+  </section>
+
+  <section id="s10"><div class="sh"><span class="si">🔧</span><span class="st">Toolbar verticale droite</span><span class="sn">10</span></div>
+  <div class="card"><div class="ct">Boutons de la toolbar (de haut en bas)</div><ul>
+  <li>🔍 Rechercher dans le chat</li><li>📋 Copier la dernière réponse</li>
+  <li>💾 Exporter la conversation</li><li>🖨️ Imprimer</li>
+  <li>A+ / A− Police plus grande/petite</li>
+  <li>🔄 Régénérer la dernière réponse</li><li>🗑 Effacer la conversation</li>
+  <li>❓ Aide contextuelle</li><li>Doc Manuel utilisateur</li>
+  <li>✏️ Éditeur de code</li><li>☀️/🌙 Thème</li><li>✕ Quitter</li></ul></div>
+  </section>
+
+  <section id="s11"><div class="sh"><span class="si">🎨</span><span class="st">Thèmes</span><span class="sn">11</span></div>
+  <p><kbd>Ctrl+T</kbd> ou bouton ☀️/🌙 pour basculer.</p>
+  <div class="card"><div class="ct">🌙 Thème sombre (défaut)</div>
+  <div class="pal">
+  <div class="sw"><div class="sb" style="background:#060d1a"></div><div class="sl">#060d1a</div></div>
+  <div class="sw"><div class="sb" style="background:#0a1628"></div><div class="sl">#0a1628</div></div>
+  <div class="sw"><div class="sb" style="background:#2a5a9a"></div><div class="sl">#2a5a9a</div></div>
+  <div class="sw"><div class="sb" style="background:#7aaad0"></div><div class="sl">#7aaad0</div></div>
+  </div></div>
+  <div class="card"><div class="ct">☀️ Thème clair</div>
+  <div class="pal">
+  <div class="sw"><div class="sb" style="background:#f5f5f0;border:1px solid #ddd"></div><div class="sl">#f5f5f0</div></div>
+  <div class="sw"><div class="sb" style="background:#c8d8f0"></div><div class="sl">#c8d8f0</div></div>
+  <div class="sw"><div class="sb" style="background:#1a4f8a"></div><div class="sl">#1a4f8a</div></div>
+  <div class="sw"><div class="sb" style="background:#0d1e35"></div><div class="sl">#0d1e35</div></div>
+  </div></div>
+  </section>
+
+  <section id="s12"><div class="sh"><span class="si">📜</span><span class="st">Crédits et licences</span><span class="sn">12</span></div>
+  <div class="card"><div class="ct">👤 Auteur</div>
+  <p><strong>carafife</strong> — <code>github.com/carafife/nseek</code></p></div>
+  <div class="card"><div class="ct">📄 Licence GPL v3</div>
+  <p>Libre d\'utilisation, modification et redistribution.</p></div>
+  <div class="card"><div class="ct">🔗 Technologies</div><ul>
+  <li><strong>Python 3.10+</strong>, <strong>GTK 4</strong>, <strong>GtkSourceView 5</strong></li>
+  <li><strong>DeepSeek API</strong>, <strong>pypdf</strong>, <strong>cairosvg</strong></li></ul></div>
+  </section>
+</div>
+<footer><p>🐋 <strong>Nseek v1.0</strong> — Client IA natif GTK4 Linux</p>
+<p>&copy; 2026 <strong>carafife</strong> — GPL v3</p></footer>
+<script>
+const p=new URLSearchParams(window.location.search);
+if(p.get(\'theme\')==\'light\')document.body.classList.add(\'light\');
+const b=document.getElementById(\'tb\');
+b.addEventListener(\'click\',()=>{
+  document.body.classList.toggle(\'light\');
+  b.textContent=document.body.classList.contains(\'light\')?\'🌙 Thème sombre\':\'☀️ Thème clair\';
+});
+</script>
+</body></html>'''
+        # Injecter le logo PNG et l'icône en base64
+        try:
+            import base64
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            # Logo principal (header)
+            logo_path = os.path.join(base_dir, 'assets', 'nseek-logo.png')
+            if os.path.exists(logo_path):
+                with open(logo_path, 'rb') as lf:
+                    logo_b64 = base64.b64encode(lf.read()).decode()
+                html = html.replace('src="" alt="Nseek"',
+                    f'src="data:image/png;base64,{logo_b64}" alt="Nseek"')
+            # Icône petite (sections + footer) — remplace les emojis 🐋
+            icon_path = os.path.join(base_dir, 'assets', 'nseek-icon-ciel.png')
+            if os.path.exists(icon_path):
+                with open(icon_path, 'rb') as lf:
+                    icon_b64 = base64.b64encode(lf.read()).decode()
+                icon_img = f'<img src="data:image/png;base64,{icon_b64}" style="width:168px;height:168px;vertical-align:middle;margin-right:4px" alt="Nseek">'
+                html = html.replace('🐋 ', icon_img + ' ')
+                html = html.replace('🐋', icon_img)
+        except Exception:
+            pass
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(html)
+        self.status.set_text(f"✅ Manuel généré : {path}")
+
     def _show_help(self, *_):
         dlg = Gtk.Window(title="Aide — Nseek")
         dlg.set_default_size(580, 620)
