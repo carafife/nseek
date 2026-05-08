@@ -640,6 +640,7 @@ class Win(Gtk.ApplicationWindow):
 
         win = Gtk.Window(title="Nseek — Éditeur de code")
         win.set_default_size(900, 700)
+        win.maximize()
         self._editor_win = win
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -2121,7 +2122,7 @@ class App(Gtk.Application):
 
     def _show_splash(self):
         splash = Gtk.Window(title="Nseek")
-        splash.set_default_size(700, 380)
+        splash.set_default_size(860, 460)
         splash.set_resizable(False)
         splash.set_decorated(False)
 
@@ -2138,18 +2139,21 @@ class App(Gtk.Application):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
         box.set_vexpand(True); box.set_hexpand(True)
         box.set_valign(Gtk.Align.CENTER); box.set_halign(Gtk.Align.CENTER)
-        box.set_margin_top(40); box.set_margin_bottom(40)
-        box.set_margin_start(60); box.set_margin_end(60)
+        box.set_margin_top(20); box.set_margin_bottom(20)
+        box.set_margin_start(20); box.set_margin_end(20)
         splash.set_child(box)
 
-        logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "nseek-logo.png")
+        # Logo splash — version standard qui fonctionne
+        base = os.path.dirname(os.path.abspath(__file__))
+        logo_path = os.path.join(base, "assets", "nseek-logo.png")
         if os.path.exists(logo_path):
             from gi.repository import GdkPixbuf, Gdk as GdkLocal
-            pb = GdkPixbuf.Pixbuf.new_from_file_at_scale(logo_path, 580, 265, True)
+            pb = GdkPixbuf.Pixbuf.new_from_file_at_scale(logo_path, 700, 320, True)
             texture = GdkLocal.Texture.new_for_pixbuf(pb)
             pic = Gtk.Picture.new_for_paintable(texture)
-            pic.set_size_request(580, 265)
-            pic.set_can_shrink(False)
+            pic.set_size_request(600, 270)
+            pic.set_can_shrink(True)
+            pic.set_hexpand(True)
             box.append(pic)
 
         self._progress = Gtk.ProgressBar()
@@ -2158,16 +2162,19 @@ class App(Gtk.Application):
         box.append(self._progress)
 
         lbl = Gtk.Label(label="Chargement…"); lbl.add_css_class("splash-loading")
+        lbl.set_margin_top(8)
         box.append(lbl)
 
-        # Powered by
+        # 9. Espacement entre les lignes
         pw_lbl = Gtk.Label()
         pw_lbl.set_markup('<span font="12" font_weight="bold" foreground="#7aaad0">powered by DeepSeek V4</span>')
+        pw_lbl.set_margin_top(6)
         box.append(pw_lbl)
 
-        # Copyright
         copy_lbl = Gtk.Label()
         copy_lbl.set_markup('<span font="11" font_weight="bold" foreground="#90d8ff">🐋 © 2026 carafife — Nseek v1.0 — GPL v3</span>')
+        copy_lbl.set_margin_top(4)
+        copy_lbl.set_margin_bottom(8)
         box.append(copy_lbl)
 
         splash.present()
