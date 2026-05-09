@@ -67,6 +67,17 @@
 
   <content_rating type="oars-1.1"/>
 
+  <screenshots>
+    <screenshot type="default">
+      <caption>Chat IA en streaming avec blocs de code</caption>
+      <image type="source">https://raw.githubusercontent.com/carafife/nseek/main/assets/screenshot-1.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Éditeur de code avec terminal interactif</caption>
+      <image type="source">https://raw.githubusercontent.com/carafife/nseek/main/assets/screenshot-2.png</image>
+    </screenshot>
+  </screenshots>
+
   <releases>
     <release version="1.0" date="2026-05-09">
       <description>
