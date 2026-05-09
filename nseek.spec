@@ -55,11 +55,20 @@ install -m 644 assets/nseek-icon-ciel.png  %{buildroot}%{_datadir}/%{name}/asset
 install -m 644 assets/nseek-icon-ciel.svg  %{buildroot}%{_datadir}/%{name}/assets/
 install -m 644 assets/nseek-icon-marine.svg %{buildroot}%{_datadir}/%{name}/assets/
 install -m 644 assets/nseek-logo.svg       %{buildroot}%{_datadir}/%{name}/assets/
+install -m 644 assets/nseek-icon-128.png   %{buildroot}%{_datadir}/%{name}/assets/
+install -m 644 assets/nseek-icon-256.png   %{buildroot}%{_datadir}/%{name}/assets/
+install -m 644 assets/nseek-icon-512.png   %{buildroot}%{_datadir}/%{name}/assets/
 
-# Icône système (pour GNOME Activities et Wayland)
+# Icônes système aux 3 tailles pour GNOME/KDE
+install -d %{buildroot}%{_datadir}/icons/hicolor/128x128/apps
 install -d %{buildroot}%{_datadir}/icons/hicolor/256x256/apps
-install -m 644 assets/nseek-icon-ciel.png \
+install -d %{buildroot}%{_datadir}/icons/hicolor/512x512/apps
+install -m 644 assets/nseek-icon-128.png \
+    %{buildroot}%{_datadir}/icons/hicolor/128x128/apps/%{name}.png
+install -m 644 assets/nseek-icon-256.png \
     %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/%{name}.png
+install -m 644 assets/nseek-icon-512.png \
+    %{buildroot}%{_datadir}/icons/hicolor/512x512/apps/%{name}.png
 
 # Lanceur .desktop (intégration GNOME/KDE)
 install -d %{buildroot}%{_datadir}/applications
@@ -86,10 +95,12 @@ chmod 755 %{buildroot}%{_bindir}/%{name}
 %{_bindir}/%{name}
 %{_datadir}/%{name}/
 %{_datadir}/applications/%{name}.desktop
+%{_datadir}/icons/hicolor/128x128/apps/%{name}.png
 %{_datadir}/icons/hicolor/256x256/apps/%{name}.png
+%{_datadir}/icons/hicolor/512x512/apps/%{name}.png
 
 %changelog
-* Fri May 09 2026 carafife <carafife@fedora> - 1.0-1
+* Sat May 09 2026 carafife <carafife@fedora> - 1.0-1
 - Version initiale : chat IA GTK4, éditeur code VTE, Persona, 10 langues
 - Terminal interactif VTE, coloration syntaxique GtkSourceView 5
 - Thèmes clair/sombre, manuel utilisateur intégré
