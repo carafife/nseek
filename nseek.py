@@ -1264,14 +1264,24 @@ class Win(Gtk.ApplicationWindow):
     # ── Fenêtre d'aide contextuelle ────────────────────────────────────────────
     def _open_manual(self, *_):
         """Ouvre le manuel utilisateur — le génère si absent."""
+        # Si installé en RPM (/usr/share/...) le dossier est en lecture seule
+        # On utilise ~/.local/share/nseek/docs/ à la place
         base = os.path.dirname(os.path.abspath(__file__))
-        docs_dir = os.path.join(base, "docs")
-        os.makedirs(docs_dir, exist_ok=True)
-        manuel = os.path.join(docs_dir, "manuel.html")
+        system_docs = os.path.join(base, "docs", "manuel.html")
+        user_docs   = os.path.expanduser("~/.local/share/nseek/docs/manuel.html")
+
+        # Choisir l'emplacement : system si accessible en écriture, sinon user
+        if os.access(os.path.dirname(system_docs), os.W_OK):
+            manuel = system_docs
+        else:
+            manuel = user_docs
+
+        os.makedirs(os.path.dirname(manuel), exist_ok=True)
         theme = "dark" if self.is_dark else "light"
-        # Générer le fichier s'il n'existe pas
+
         if not os.path.exists(manuel):
             self._generate_manual(manuel)
+
         uri = f"file://{manuel}?theme={theme}"
         try:
             Gio.AppInfo.launch_default_for_uri(uri, None)
