@@ -1642,7 +1642,7 @@ b.addEventListener(\'click\',()=>{
                 ("<b>🤖 Correction</b>", "Envoie le code + l'erreur à DeepSeek"),
                 ("<b>🐋 Nseek</b>", "Revenir à la fenêtre Nseek"),
             ]),
-            ("🔑 CLÉ API & PERSONA", [
+            ("🔑 CLÉ API &amp; PERSONA", [
                 ("<b>Clé API ✏️</b>", "Cliquer ✏️ pour saisir ou modifier la clé"),
                 ("<b>Persona ✏️</b>", "Définit le rôle de l'IA — cliquer ✏️ pour modifier"),
                 ("<b>Clé sauvegardée</b>", "~/Documents/cle_deepseek_v4_api.txt"),
