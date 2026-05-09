@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>fr.local.nseek</id>
+
+  <name>Nseek</name>
+  <name xml:lang="fr">Nseek</name>
+
+  <summary>Client IA natif GTK4 pour DeepSeek V4</summary>
+  <summary xml:lang="fr">Client IA natif GTK4 pour DeepSeek V4</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <description>
+    <p>
+      Nseek est un client IA natif pour Linux, construit avec GTK4 et Python.
+      Il permet d'interagir avec les modèles DeepSeek V4 directement depuis
+      le bureau GNOME ou KDE, sans navigateur, avec une interface soignée
+      et des fonctions avancées.
+    </p>
+    <p xml:lang="fr">
+      Nseek est un client IA natif pour Linux, construit avec GTK4 et Python.
+      Il permet d'interagir avec les modèles DeepSeek V4 directement depuis
+      le bureau GNOME ou KDE, sans navigateur.
+    </p>
+    <ul>
+      <li>Chat IA en streaming temps réel avec mode Thinking</li>
+      <li>Éditeur de code intégré avec coloration syntaxique (GtkSourceView 5)</li>
+      <li>Terminal interactif (VTE) pour exécuter les scripts</li>
+      <li>Persona configurable — définissez le rôle de l'IA</li>
+      <li>Sélecteur de 10 langues de réponse</li>
+      <li>Historique des conversations sauvegardé localement</li>
+      <li>Support des pièces jointes texte et PDF</li>
+      <li>Thèmes clair et sombre</li>
+      <li>Manuel utilisateur intégré</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">nseek.desktop</launchable>
+
+  <url type="homepage">https://github.com/carafife/nseek</url>
+  <url type="bugtracker">https://github.com/carafife/nseek/issues</url>
+
+  <developer id="carafife">
+    <name>carafife</name>
+  </developer>
+
+  <categories>
+    <category>Network</category>
+    <category>Office</category>
+    <category>Utility</category>
+  </categories>
+
+  <keywords>
+    <keyword>IA</keyword>
+    <keyword>AI</keyword>
+    <keyword>DeepSeek</keyword>
+    <keyword>chat</keyword>
+    <keyword>code</keyword>
+    <keyword>assistant</keyword>
+    <keyword xml:lang="fr">intelligence artificielle</keyword>
+  </keywords>
+
+  <provides>
+    <binary>nseek</binary>
+  </provides>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="1.0" date="2026-05-09">
+      <description>
+        <p>Version initiale de Nseek.</p>
+        <ul>
+          <li>Chat IA GTK4 natif avec streaming</li>
+          <li>Éditeur de code avec terminal VTE interactif</li>
+          <li>Persona configurable et sélecteur de 10 languages</li>
+          <li>Thèmes clair et sombre</li>
+          <li>Manuel utilisateur HTML intégré</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+</component>

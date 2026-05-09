@@ -74,6 +74,10 @@ install -m 644 assets/nseek-icon-512.png \
 install -d %{buildroot}%{_datadir}/applications
 install -m 644 nseek.desktop %{buildroot}%{_datadir}/applications/
 
+# Métadonnées AppStream (GNOME Logiciels)
+install -d %{buildroot}%{_datadir}/metainfo
+install -m 644 nseek.metainfo.xml %{buildroot}%{_datadir}/metainfo/
+
 # Script de lancement dans /usr/bin
 install -d %{buildroot}%{_bindir}
 cat > %{buildroot}%{_bindir}/%{name} << 'EOF'
@@ -95,6 +99,7 @@ chmod 755 %{buildroot}%{_bindir}/%{name}
 %{_bindir}/%{name}
 %{_datadir}/%{name}/
 %{_datadir}/applications/%{name}.desktop
+%{_datadir}/metainfo/%{name}.metainfo.xml
 %{_datadir}/icons/hicolor/128x128/apps/%{name}.png
 %{_datadir}/icons/hicolor/256x256/apps/%{name}.png
 %{_datadir}/icons/hicolor/512x512/apps/%{name}.png
