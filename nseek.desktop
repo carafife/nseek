@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=Nseek
+Name[fr]=Nseek
+GenericName=Client IA
+GenericName[fr]=Client IA
+Comment=Client IA natif GTK4 pour DeepSeek V4
+Comment[fr]=Client IA natif GTK4 pour DeepSeek V4
+Exec=nseek
+Icon=nseek
+Terminal=false
+Type=Application
+Categories=Network;Office;
+Keywords=IA;AI;DeepSeek;chat;code;
+StartupNotify=true
+StartupWMClass=fr.local.nseek
