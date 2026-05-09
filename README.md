@@ -8,13 +8,25 @@
   <img src="https://img.shields.io/badge/Python-3.10+-blue" alt="Python"/>
   <img src="https://img.shields.io/badge/GTK-4.0-green" alt="GTK"/>
   <img src="https://img.shields.io/badge/GtkSourceView-5-orange" alt="GtkSourceView"/>
-  <img src="https://img.shields.io/badge/Fedora-compatible-blue" alt="Fedora"/>
+  <img src="https://img.shields.io/badge/VTE-3.91-purple" alt="VTE"/>
+  <img src="https://img.shields.io/badge/Fedora-COPR-blue" alt="COPR"/>
   <img src="https://img.shields.io/badge/License-GPL%20v3-yellow" alt="License"/>
 </p>
 
 <p align="center">
-  <strong>Nseek</strong> est un client IA natif GTK4 pour Linux, conçu pour interagir avec l'API <a href="https://platform.deepseek.com">DeepSeek V4</a> directement depuis le bureau GNOME — sans navigateur, sans Electron, 100% natif.
+  <strong>Nseek</strong> est un client IA natif GTK4 pour Linux, conçu pour interagir avec l'API <a href="https://platform.deepseek.com">DeepSeek V4</a> directement depuis le bureau GNOME ou KDE — sans navigateur, sans Electron, 100% natif.
 </p>
+
+---
+
+## 📦 Installation via COPR (Fedora recommandé)
+
+```bash
+dnf copr enable carafife/nseek
+dnf install nseek
+```
+
+Nseek apparaîtra dans GNOME Activities et GNOME Logiciels.
 
 ---
 
@@ -34,6 +46,7 @@
 ### ✏️ Éditeur de code intégré
 - Fenêtre indépendante avec **GtkSourceView 5**
 - Numéros de ligne, coloration syntaxique multi-langages
+- **Terminal VTE interactif** — supporte `input()`, jeux, CLI, programmes interactifs
 - **Exécution directe** : Python, Bash, JavaScript (Node), Go
 - Bouton **🤖 Demander correction** — envoie le code et l'erreur à DeepSeek automatiquement
 - Sauvegarde dans `~/Documents/`
@@ -49,6 +62,7 @@
 - Toolbar verticale avec toutes les actions
 - **Manuel utilisateur HTML intégré** (bouton Doc)
 - Splash screen animé au démarrage
+- Icônes 128/256/512px — intégration GNOME/KDE native
 
 ### 📊 Stats & Export
 - Compteur de tokens envoyés/reçus en temps réel
@@ -58,25 +72,21 @@
 
 ---
 
-## 📋 Prérequis
+## 🖥️ Installation manuelle
 
-- Linux avec **GNOME/Wayland** (testé sur Fedora 41+)
-- Python 3.10+
-- GTK 4.0 + GtkSourceView 5
+### Prérequis
 
 ```bash
 # Fedora
-sudo dnf install python3-gobject gtk4 gtksourceview5 python3-pip
+sudo dnf install python3-gobject gtk4 gtksourceview5 vte291-gtk4 python3-pip
 pip install pypdf cairosvg --break-system-packages
 ```
 
----
-
-## 🚀 Installation
+### Lancement
 
 ```bash
 git clone https://github.com/carafife/nseek.git
-cd nseek
+cd nseek/Nseek
 python3 nseek.py
 ```
 
@@ -127,9 +137,27 @@ python3 nseek.py
 
 ```
 Chat Nseek → DeepSeek génère du code → 📋 Copier
-    → ✏️ Éditeur → 📋 Coller → modifier → ▶ Exécuter
+    → ✏️ Éditeur → 📋 Coller → modifier → ▶ Exécuter (VTE interactif)
     → erreur ? → 🤖 Demander correction → DeepSeek corrige
     → 🐋 Nseek → réponse corrigée
+```
+
+---
+
+## 🏗️ Structure du projet
+
+```
+Programmes/
+└── Nseek/
+    ├── nseek.py          # Programme principal (~2600 lignes)
+    ├── make_logo.py       # Générateur de logos SVG→PNG
+    ├── nseek.spec         # Spec RPM pour COPR/Fedora
+    ├── nseek.desktop      # Lanceur bureau
+    ├── nseek.metainfo.xml # Métadonnées AppStream (GNOME Logiciels)
+    ├── LICENSE            # GPL v3
+    ├── README.md
+    ├── assets/            # Logos et icônes (128/256/512px)
+    └── docs/              # Manuel utilisateur HTML
 ```
 
 ---
@@ -149,4 +177,4 @@ GPL v3 — libre d'utilisation, modification et redistribution.
 ## 🙏 Remerciements
 
 - [DeepSeek](https://deepseek.com) pour l'API V4
-- La communauté [Fedora](https://fedoraproject.org) pour l'inspiration
+- La communauté [Fedora](https://fedoraproject.org) et [COPR](https://copr.fedorainfracloud.org)
