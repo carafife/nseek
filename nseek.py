@@ -787,16 +787,32 @@ class Win(Gtk.ApplicationWindow):
         out_bar.append(self.send_err_btn)
 
         btn_clr = Gtk.Button(label="🗑"); btn_clr.add_css_class("tool"); btn_clr.set_focusable(False)
-        btn_clr.connect("clicked", lambda *_: self.output_buf.set_text(""))
+        btn_clr.connect("clicked", self._clear_terminal)
         out_bar.append(btn_clr)
         box.append(out_bar)
 
-        self.output_buf = Gtk.TextBuffer()
-        self.output_view = Gtk.TextView(buffer=self.output_buf)
-        self.output_view.set_editable(False); self.output_view.set_monospace(True)
-        self.output_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
-        sw_out = Gtk.ScrolledWindow(); sw_out.set_child(self.output_view)
-        sw_out.set_size_request(-1, 180)
+        # Terminal VTE pour l'exécution interactive (supporte input())
+        try:
+            gi.require_version('Vte', '3.91')
+            from gi.repository import Vte
+            self.term = Vte.Terminal()
+            self.term.set_size_request(-1, 200)
+            self.term.set_scrollback_lines(1000)
+            self.term.set_font_scale(0.95)
+            self._has_vte = True
+            # Détecter la fin d'exécution et le code de retour
+            self.term.connect("child-exited", self._on_child_exited)
+            sw_out = Gtk.ScrolledWindow(); sw_out.set_child(self.term)
+            sw_out.set_size_request(-1, 200); sw_out.set_vexpand(True)
+        except Exception:
+            # Fallback : TextView classique
+            self._has_vte = False
+            self.output_buf = Gtk.TextBuffer()
+            self.output_view = Gtk.TextView(buffer=self.output_buf)
+            self.output_view.set_editable(False); self.output_view.set_monospace(True)
+            self.output_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+            sw_out = Gtk.ScrolledWindow(); sw_out.set_child(self.output_view)
+            sw_out.set_size_request(-1, 280); sw_out.set_vexpand(True)
         box.append(sw_out)
 
         win.set_child(box)
@@ -829,51 +845,126 @@ class Win(Gtk.ApplicationWindow):
             code = self.editor_buf.get_text(
                 self.editor_buf.get_start_iter(), self.editor_buf.get_end_iter(), False)
             if not code.strip():
-                self.output_buf.set_text("⚠️ Éditeur vide !"); return
+                self._out("⚠️ Éditeur vide !"); return
             lang_id = self.editor_lang_model.get_string(self.editor_lang_dd.get_selected())
             ext = {"python3":"py","sh":"sh","javascript":"js","c":"c","cpp":"cpp",
                    "rust":"rs","go":"go","sql":"sql"}.get(lang_id, "txt")
             fname = os.path.expanduser(
                 f"~/Documents/nseek_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.{ext}")
             with open(fname, 'w') as f: f.write(code)
-            self.output_buf.set_text(f"✅ Sauvegardé :\n{fname}")
+            self._out(f"✅ Sauvegardé : {fname}")
             self.status.set_text(f"✅ Sauvegardé : {fname}")
         except Exception as e:
-            self.output_buf.set_text(f"❌ Erreur sauvegarde : {e}")
+            self._out(f"❌ Erreur sauvegarde : {e}")
+
+    def _out(self, msg):
+        """Affiche un message dans le terminal VTE ou le buffer de sortie."""
+        if getattr(self, '_has_vte', False):
+            self.status.set_text(msg)
+        else:
+            if hasattr(self, 'output_buf'):
+                self.output_buf.set_text(msg)
+
+    def _clear_terminal(self, *_):
+        if getattr(self, '_has_vte', False):
+            self.term.reset(True, True)
+        else:
+            self.output_buf.set_text("")
 
     def _run_editor_code(self, *_):
-        import subprocess, tempfile, threading
+        import tempfile
         if not hasattr(self, 'editor_buf'): return
         code = self.editor_buf.get_text(
             self.editor_buf.get_start_iter(), self.editor_buf.get_end_iter(), False)
-        if not code.strip(): self.output_buf.set_text("⚠️ Éditeur vide !"); return
+        if not code.strip():
+            self._out("⚠️ Éditeur vide !")
+            return
         lang_id = self.editor_lang_model.get_string(self.editor_lang_dd.get_selected())
-        ext = {"python3":"py","sh":"sh","javascript":"js","c":"c","cpp":"cpp",
-               "rust":"rs","go":"go","sql":"sql"}.get(lang_id, "txt")
-        runners = {"python3":["python3"],"sh":["bash"],"javascript":["node"],
-                   "go":["go","run"]}
+        ext = {"python3":"py","sh":"sh","javascript":"js","go":"go"}.get(lang_id, "txt")
+        runners = {"python3":"python3","sh":"bash","javascript":"node","go":"go run"}
         runner = runners.get(lang_id)
-        if not runner: self.output_buf.set_text(f"⚠️ Exécution non supportée pour {lang_id}"); return
+        if not runner:
+            self._out(f"⚠️ Non supporté : {lang_id}")
+            return
+
+        # Sauver dans un fichier temp
+        with tempfile.NamedTemporaryFile(suffix=f".{ext}", mode='w', delete=False) as f:
+            f.write(code); tmp = f.name
+
         self.run_btn.set_sensitive(False); self.run_btn.set_label("⏳...")
-        self.output_buf.set_text("⏳ Exécution...\n"); self.send_err_btn.set_visible(False)
-        def run_t():
-            try:
-                with tempfile.NamedTemporaryFile(suffix=f".{ext}", mode='w', delete=False) as f:
-                    f.write(code); tmp = f.name
-                r = subprocess.run(runner+[tmp], capture_output=True, text=True, timeout=30)
-                os.unlink(tmp)
-                GLib.idle_add(self._show_output, r.stdout, r.stderr, r.returncode)
-            except subprocess.TimeoutExpired:
-                GLib.idle_add(self._show_output, "", "⏱️ Timeout (30s)", 1)
-            except Exception as e:
-                GLib.idle_add(self._show_output, "", str(e), 1)
-        threading.Thread(target=run_t, daemon=True).start()
+        self.send_err_btn.set_visible(False)
+
+        if getattr(self, '_has_vte', False):
+            # VTE : exécution interactive complète (supporte input())
+            gi.require_version('Vte', '3.91')
+            from gi.repository import Vte
+            import tempfile as _tf
+            code_file = _tf.mktemp(suffix='.exitcode')
+            cmd = (f"{runner} {tmp}; _code=$?; "
+                   f"echo ''; echo '--- Terminé (code: '$_code') ---'; "
+                   f"rm -f {tmp}; echo $_code > {code_file}")
+            self.term.reset(True, True)
+            self.term.spawn_async(
+                Vte.PtyFlags.DEFAULT, None,
+                ['/bin/bash', '-c', cmd],
+                None, GLib.SpawnFlags(0),
+                None, None, -1, None, self._on_vte_done, None
+            )
+            # Poller le fichier de code de sortie toutes les 500ms
+            def _poll(cf=code_file):
+                if os.path.exists(cf):
+                    try:
+                        with open(cf) as f: exit_code = int(f.read().strip())
+                    except: exit_code = 0
+                    os.unlink(cf)
+                    self.run_btn.set_sensitive(True)
+                    self.run_btn.set_label("▶ Exécuter")
+                    # Toujours afficher le bouton correction après exécution
+                    self.send_err_btn.set_visible(True)
+                    return False  # Arrêter le timer
+                return True  # Continuer à surveiller
+            GLib.timeout_add(500, _poll)
+        else:
+            # Fallback subprocess
+            import subprocess, threading
+            def run_t():
+                try:
+                    r = subprocess.run(runner.split()+[tmp], capture_output=True, text=True, timeout=30)
+                    os.unlink(tmp)
+                    GLib.idle_add(self._show_output, r.stdout, r.stderr, r.returncode)
+                except subprocess.TimeoutExpired:
+                    GLib.idle_add(self._show_output, "", "⏱️ Timeout (30s)", 1)
+                except Exception as e:
+                    GLib.idle_add(self._show_output, "", str(e), 1)
+            threading.Thread(target=run_t, daemon=True).start()
+
+    def _on_vte_done(self, terminal, pid, error, userdata):
+        """Appelé quand VTE a spawné le process."""
+        if error:
+            GLib.idle_add(self._reset_run_btn)
+
+    def _reset_run_btn(self):
+        self.run_btn.set_sensitive(True)
+        self.run_btn.set_label("▶ Exécuter")
+        return False
+
+    def _on_child_exited(self, terminal, status):
+        """Appelé quand le process VTE se termine — détecte les erreurs."""
+        import os as _os
+        exit_code = _os.waitstatus_to_exitcode(status) if hasattr(_os, 'waitstatus_to_exitcode') else (status >> 8)
+        def _update():
+            self.run_btn.set_sensitive(True)
+            self.run_btn.set_label("▶ Exécuter")
+            self.send_err_btn.set_visible(exit_code != 0)
+            self.term.grab_focus()
+            return False
+        GLib.idle_add(_update)
 
     def _show_output(self, stdout, stderr, rc):
         self.run_btn.set_sensitive(True); self.run_btn.set_label("▶ Exécuter")
         out = (f"✅ Succès\n\n{stdout}" if rc==0 else f"❌ Échec (code {rc})\n\n{stdout}")
         if stderr: out += f"\n⚠️ Erreurs :\n{stderr}"
-        self.output_buf.set_text(out.strip())
+        self._out(out.strip())
         if rc != 0:
             self._last_error = stderr or stdout
             self.send_err_btn.set_visible(True)
@@ -882,11 +973,18 @@ class Win(Gtk.ApplicationWindow):
         """Envoie le code + l'erreur à DeepSeek — cache l'éditeur pour éviter le tiling GNOME."""
         code = self.editor_buf.get_text(
             self.editor_buf.get_start_iter(), self.editor_buf.get_end_iter(), False)
-        error = getattr(self, '_last_error', '')
         lang_id = self.editor_lang_model.get_string(self.editor_lang_dd.get_selected())
-        msg = f"Ce code {lang_id} génère une erreur. Peux-tu le corriger ?\n\n```{lang_id}\n{code}\n```\n\nErreur :\n```\n{error}\n```"
+        # Récupérer le texte du terminal VTE ou le dernier stderr connu
+        error = ""
+        if getattr(self, '_has_vte', False):
+            try:
+                error = self.term.get_text_format(1, None, False)[0]  # Vte.Format.TEXT = 1
+            except Exception:
+                error = getattr(self, '_last_error', 'Erreur d\'exécution (voir terminal)')
+        else:
+            error = getattr(self, '_last_error', '')
+        msg = f"Ce code {lang_id} génère une erreur. Peux-tu le corriger ?\n\n```{lang_id}\n{code}\n```\n\nErreur :\n```\n{error.strip()[-2000:]}\n```"
         self.msg_buf.set_text(msg)
-        # Cacher l'éditeur avant d'envoyer (minimize ne marche pas sur Wayland)
         if hasattr(self, '_editor_win') and self._editor_win:
             self._editor_win.hide()
         GLib.timeout_add(300, self._send)
