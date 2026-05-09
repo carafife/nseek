@@ -36,7 +36,7 @@ Nseek apparaîtra dans GNOME Activities et GNOME Logiciels.
 - Streaming temps réel des réponses
 - **Mode Thinking** — raisonnement interne du modèle visible
 - Détection et rendu des **blocs de code** avec coloration syntaxique (GtkSourceView 5)
-- Support des pièces jointes : fichiers texte et **PDF** (extraction automatique)
+- Support des pièces jointes : fichiers texte et **PDF** (les images ne sont pas supportées par l'API DeepSeek)
 - Glisser-déposer de fichiers dans la fenêtre de chat
 
 ### 🎭 Persona & Langue

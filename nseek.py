@@ -607,7 +607,7 @@ class Win(Gtk.ApplicationWindow):
         bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         bar.set_margin_start(10); bar.set_margin_end(10); bar.set_margin_bottom(6)
         fb = Gtk.Button(label="📎"); fb.add_css_class("tool"); fb.set_focusable(False)
-        fb.set_tooltip_text("Joindre fichier/image"); fb.connect("clicked", self._pick_file)
+        fb.set_tooltip_text("Joindre fichier texte ou PDF (images non supportées par l'API)"); fb.connect("clicked", self._pick_file)
         bar.append(fb)
         self.msg_buf = Gtk.TextBuffer()
         self.msg_tv  = Gtk.TextView(buffer=self.msg_buf)
@@ -1596,7 +1596,7 @@ b.addEventListener(\'click\',()=>{
             ("✏️ SAISIE", [
                 ("<b>Entrée</b>", "Envoyer le message"),
                 ("<b>Maj+Entrée</b>", "Saut de ligne"),
-                ("<b>📎</b>", "Joindre un fichier texte/PDF"),
+                ("<b>📎</b>", "Joindre un fichier texte ou PDF (images non supportées)"),
                 ("Glisser-déposer", "Un fichier dans la fenêtre"),
             ]),
             ("🤖 MODÈLES", [
