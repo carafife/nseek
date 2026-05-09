@@ -2500,7 +2500,11 @@ b.addEventListener(\'click\',()=>{
 # ─────────────────────────────────────────────────────────────────────────────
 class App(Gtk.Application):
     def __init__(self):
-        super().__init__(application_id="fr.local.nseek")
+        # Utiliser l'ID Flatpak si on tourne dans un sandbox, sinon l'ID local
+        import os as _os
+        app_id = "io.github.carafife.nseek" if _os.path.exists("/app/share/nseek") else "fr.local.nseek"
+        super().__init__(application_id=app_id,
+                         flags=Gio.ApplicationFlags.NON_UNIQUE)
         self.set_resource_base_path(None)
     def do_activate(self):
         self._show_splash()
