@@ -852,15 +852,18 @@ class Win(Gtk.ApplicationWindow):
             fname = os.path.expanduser(
                 f"~/Documents/nseek_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.{ext}")
             with open(fname, 'w') as f: f.write(code)
-            self._out(f"✅ Sauvegardé : {fname}")
-            self.status.set_text(f"✅ Sauvegardé : {fname}")
+            self._out(f"\r\n\033[32m✅ Sauvegardé : {fname}\033[0m\r\n")
         except Exception as e:
-            self._out(f"❌ Erreur sauvegarde : {e}")
+            self._out(f"\r\n\033[31m❌ Erreur sauvegarde : {e}\033[0m\r\n")
+            print(f"_save_editor_code error: {e}")
 
     def _out(self, msg):
         """Affiche un message dans le terminal VTE ou le buffer de sortie."""
         if getattr(self, '_has_vte', False):
-            self.status.set_text(msg)
+            try:
+                self.term.feed(msg.encode())
+            except Exception:
+                pass
         else:
             if hasattr(self, 'output_buf'):
                 self.output_buf.set_text(msg)
