@@ -1385,7 +1385,10 @@ footer strong{color:var(--ci)}
   <li>Sélecteur de 10 langues</li><li>Pièces jointes (texte, PDF)</li>
   <li>Thème clair et sombre</li><li>Impression des conversations</li>
   </ul></div>
-  <div class="tip">Nseek fonctionne sur Linux avec GNOME/Wayland. Une clé API DeepSeek est requise.</div>
+  <div class="tip">Nseek fonctionne sur Linux avec GNOME/Wayland. Une clé API DeepSeek V4 est requise.<br>
+  💡 <b>Nseek est totalement gratuit et open source (GPL v3).</b><br>
+  L'API DeepSeek V4 est un service payant à l'usage. Des promotions sont parfois proposées par la plateforme.<br>
+  À noter : DeepSeek V3 est accessible gratuitement via <a href="https://chat.deepseek.com">chat.deepseek.com</a>, sans avoir besoin de Nseek.</div>
   </section>
 
   <section id="s2"><div class="sh"><span class="si">⚙️</span><span class="st">Installation et démarrage</span><span class="sn">02</span></div>
