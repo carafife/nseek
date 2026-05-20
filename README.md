@@ -86,7 +86,7 @@ pip install pypdf cairosvg --break-system-packages
 
 ```bash
 git clone https://github.com/carafife/nseek.git
-cd nseek/Nseek
+cd nseek
 python3 nseek.py
 ```
 
@@ -103,6 +103,10 @@ python3 nseek.py
 ```
 
 > ⚠️ Ne partage jamais ce fichier et ne le commite pas dans Git.
+
+> 💡 **Nseek est totalement gratuit et open source (GPL v3).**
+> L'API DeepSeek V4 utilisée par Nseek est un service payant à l'usage — des promotions d'accès sont parfois proposées par la plateforme.
+> À noter : DeepSeek V3 est accessible gratuitement et sans limite via l'interface web officielle [chat.deepseek.com](https://chat.deepseek.com), sans avoir besoin de Nseek.
 
 ---
 
