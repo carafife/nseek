@@ -89,6 +89,7 @@ modules:
       - install -d /app/share/nseek/assets
       - install -d /app/share/nseek/docs
       - install -m 644 nseek.py /app/share/nseek/
+      - install -m 644 recherche.py /app/share/nseek/
       - install -m 644 make_logo.py /app/share/nseek/
       - cp -r assets/* /app/share/nseek/assets/
       - install -d /app/share/icons/hicolor/128x128/apps

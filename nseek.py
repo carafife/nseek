@@ -10,6 +10,7 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, GLib, Gio, Gdk, Pango
 import urllib.request, urllib.error
 import json, threading, queue, os, base64, datetime, re, signal, sys
+import recherche   # recherche web : web_search / web_fetch donnés à DeepSeek
 
 # ── Gestion du signal SIGINT (Ctrl+C dans le terminal) ───────────────────────
 signal.signal(signal.SIGINT, lambda *_: os._exit(0))
@@ -1717,6 +1718,7 @@ b.addEventListener(\'click\',()=>{
         lang_idx = int(self.lang_dd.get_selected())
         lang_instr = self.LANGUAGES[lang_idx][1]
         system = f"{s}\n{lang_instr}" if s.strip() else lang_instr
+        system += "\n\n" + recherche.consigne()
         msgs.append({"role":"system","content":system})
         msgs.extend(self.history)
         return msgs
@@ -2356,14 +2358,10 @@ b.addEventListener(\'click\',()=>{
     # ── API Streaming ─────────────────────────────────────────
     # ── Appel API en mode streaming (thread séparé) ───────────────────────────
     def _call_stream(self, key, model, think, messages):
-        body = {"model":model,"messages":messages,"max_tokens":4096,"stream":True,
-                "stream_options":{"include_usage":True}}
+        body = {"model":model,"messages":messages,"max_tokens":4096}
         if think:
             body["thinking"] = {"type":"enabled"}
             body["reasoning_effort"] = "medium"
-        req = urllib.request.Request(
-            API_URL, data=json.dumps(body).encode(),
-            headers={"Content-Type":"application/json","Authorization":f"Bearer {key}"})
 
         # Queue partagée entre le thread réseau et le timer GTK
         q = queue.Queue()
@@ -2391,55 +2389,49 @@ b.addEventListener(\'click\',()=>{
         GLib.timeout_add(500, _drain)
 
         try:
-            with urllib.request.urlopen(req, timeout=120) as r:
-                q.put(('ai_lbl', "\n🤖 DeepSeek\n"))
-                thinking_done = False; in_think = False
+            q.put(('ai_lbl', "\n🤖 DeepSeek\n"))
+            etat = {"in_think": False}
 
-                for raw_line in r:
-                    line = raw_line.decode('utf-8').strip()
-                    if not line.startswith("data: "): continue
-                    data_str = line[6:]
-                    if data_str == "[DONE]": break
-                    try:
-                        chunk = json.loads(data_str)
-                        usage = chunk.get("usage")
-                        if usage and usage.get("prompt_tokens"):
-                            self._update_stats(model,
-                                usage.get("prompt_tokens",0),
-                                usage.get("completion_tokens",0))
-                        choices = chunk.get("choices", [])
-                        if not choices: continue
-                        delta = choices[0].get("delta", {})
+            def _reasoning(txt):
+                if not think:
+                    return
+                if not etat["in_think"]:
+                    q.put(('think', "💭 Raisonnement :\n"))
+                    etat["in_think"] = True
+                q.put(('think', txt))
 
-                        rc = delta.get("reasoning_content","")
-                        if rc and think:
-                            if not in_think:
-                                q.put(('think', "💭 Raisonnement :\n"))
-                                in_think = True
-                            q.put(('think', rc))
+            def _text(txt):
+                if etat["in_think"]:
+                    q.put(('newline', ''))
+                    etat["in_think"] = False
+                full.append(txt)
+                q.put(('body', txt))
 
-                        ct = delta.get("content","")
-                        if ct:
-                            if in_think and not thinking_done:
-                                q.put(('newline', ''))
-                                thinking_done = True; in_think = False
-                            full.append(ct)
-                            q.put(('body', ct))
-                    except Exception:
-                        pass
+            def _tool(nom, args):
+                if etat["in_think"]:
+                    q.put(('newline', ''))
+                    etat["in_think"] = False
+                quoi = args.get("query") or args.get("url") or ""
+                icone = "🔎 Recherche" if nom == "web_search" else "🌐 Lecture"
+                q.put(('think', f"{icone} : {quoi}\n"))
 
-                q.put(('newline', ''))
-                reply = ''.join(full)
-                self.last_reply = reply
-                self.history.append({"role":"assistant","content":reply})
-                save_session(self.session_name, self.history)
-                GLib.idle_add(self._refresh_sidebar)
-                GLib.idle_add(self.status.set_text, "✅ Réponse reçue.")
-                # Re-rendre proprement si la réponse contient du code
-                if '```' in reply:
-                    GLib.idle_add(self._rerender_last_response, reply)
-                else:
-                    GLib.idle_add(self._scroll)
+            def _usage(u):
+                self._update_stats(model, u.get("prompt_tokens",0), u.get("completion_tokens",0))
+
+            recherche.repondre(API_URL, key, body, on_text=_text, on_reasoning=_reasoning,
+                               on_tool=_tool, on_usage=_usage)
+            q.put(('newline', ''))
+            reply = ''.join(full)
+            self.last_reply = reply
+            self.history.append({"role":"assistant","content":reply})
+            save_session(self.session_name, self.history)
+            GLib.idle_add(self._refresh_sidebar)
+            GLib.idle_add(self.status.set_text, "✅ Réponse reçue.")
+            # Re-rendre proprement si la réponse contient du code
+            if '```' in reply:
+                GLib.idle_add(self._rerender_last_response, reply)
+            else:
+                GLib.idle_add(self._scroll)
 
         except urllib.error.HTTPError as e:
             body2 = e.read().decode(errors="replace")
@@ -2464,21 +2456,17 @@ b.addEventListener(\'click\',()=>{
     def _call_sync(self, key, model, think, messages):
         body = {"model":model,"messages":messages,"max_tokens":4096}
         if think: body["thinking"]={"type":"enabled"}; body["reasoning_effort"]="medium"
-        req = urllib.request.Request(
-            API_URL, data=json.dumps(body).encode(),
-            headers={"Content-Type":"application/json","Authorization":f"Bearer {key}"})
         try:
-            with urllib.request.urlopen(req, timeout=120) as r:
-                d = json.load(r); msg = d["choices"][0]["message"]
-                reply = msg.get("content",""); rthink = msg.get("reasoning_content","") if think else ""
-                if "usage" in d:
-                    u = d["usage"]
-                    self._update_stats(model, u.get("prompt_tokens",0), u.get("completion_tokens",0))
-                self.last_reply = reply
-                self.history.append({"role":"assistant","content":reply})
-                save_session(self.session_name, self.history)
-                GLib.idle_add(self._msg, "ai", reply, rthink)
-                GLib.idle_add(self._refresh_sidebar)
+            reply, rthink = recherche.repondre(
+                API_URL, key, body, stream=False,
+                on_usage=lambda u: self._update_stats(
+                    model, u.get("prompt_tokens",0), u.get("completion_tokens",0)))
+            if not think: rthink = ""
+            self.last_reply = reply
+            self.history.append({"role":"assistant","content":reply})
+            save_session(self.session_name, self.history)
+            GLib.idle_add(self._msg, "ai", reply, rthink)
+            GLib.idle_add(self._refresh_sidebar)
         except urllib.error.HTTPError as e:
             body2 = e.read().decode(errors="replace")
             try:    m = json.loads(body2)["error"]["message"]
