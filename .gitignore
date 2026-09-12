@@ -11,3 +11,6 @@ __pycache__/
 
 # AppImages tierces
 *.AppImage
+
+# Graphify (graphe de connaissance généré — ne pas versionner)
+graphify-out/
