@@ -46,6 +46,7 @@ install -d %{buildroot}%{_datadir}/%{name}/docs
 # Fichiers Python
 install -m 644 nseek.py     %{buildroot}%{_datadir}/%{name}/
 install -m 644 recherche.py %{buildroot}%{_datadir}/%{name}/
+install -m 644 rendu_md.py %{buildroot}%{_datadir}/%{name}/
 install -m 644 make_logo.py %{buildroot}%{_datadir}/%{name}/
 
 # Assets (logos et icônes)

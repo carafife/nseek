@@ -10,6 +10,7 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, GLib, Gio, Gdk, Pango
 import urllib.request, urllib.error
 import json, threading, queue, os, base64, datetime, re, signal, sys
+import rendu_md    # Markdown d'une ligne → morceaux étiquetés (gras, titres…)
 import recherche   # recherche web : web_search / web_fetch donnés à DeepSeek
 
 # ── Gestion du signal SIGINT (Ctrl+C dans le terminal) ───────────────────────
@@ -215,6 +216,7 @@ TAGS_DARK = {
     "body":  {"foreground":"#e0eeff"},
     "code":  {"foreground":"#6ee7b7","family":"Monospace","background":"#0a1628"},
     "bold":  {"foreground":"#fbbf24","weight":700},
+    "italic":{"foreground":"#e0eeff","style":2},
     "info":  {"foreground":"#2d5a8a","style":2},
     "hl":    {"background":"#1d4ed8","foreground":"#ffffff"},
 }
@@ -227,6 +229,7 @@ TAGS_LIGHT = {
     "body":  {"foreground":"#1a1a1a"},
     "code":  {"foreground":"#1e6b1e","family":"Monospace","background":"#e0edd0"},
     "bold":  {"foreground":"#8a4800","weight":700},
+    "italic":{"foreground":"#1a1a1a","style":2},
     "info":  {"foreground":"#888886","style":2},
     "hl":    {"background":"#e6a817","foreground":"#000000"},
 }
@@ -1780,10 +1783,8 @@ b.addEventListener(\'click\',()=>{
                 self._insert_code_block(lang, code)
             else:
                 for line in p.split('\n'):
-                    for seg in re.split(r'(\*\*[^*]+\*\*|`[^`]+`)', line):
-                        if seg.startswith('**') and seg.endswith('**'): self._ins(seg[2:-2], "bold")
-                        elif seg.startswith('`') and seg.endswith('`'):  self._ins(seg[1:-1], "code")
-                        else: self._ins(seg, "body")
+                    for texte, tag in rendu_md.segments(line):
+                        self._ins(texte, tag)
                     self._ins('\n', "body")
 
     def _insert_code_block(self, lang, code):
@@ -1863,24 +1864,6 @@ b.addEventListener(\'click\',()=>{
         anchor = self.buf.create_child_anchor(self.buf.get_end_iter())
         self.view.add_child_at_anchor(box, anchor)
         self._ins("\n\n", "body")
-
-    def _rerender_last_response(self, reply):
-        """Après streaming, efface la dernière réponse et la re-rend avec blocs de code."""
-        end = self.buf.get_end_iter()
-        marker = "🤖 DeepSeek"
-        found = None
-        it = self.buf.get_start_iter()
-        while True:
-            res = it.forward_search(marker, Gtk.TextSearchFlags.VISIBLE_ONLY, end)
-            if not res: break
-            found = res[0]; it = res[1]
-        if not found: self._scroll(); return
-        found.forward_chars(len(marker) + 1)
-        self.buf.delete(found, self.buf.get_end_iter())
-        self._ins("\n", "body")
-        self._render(reply)
-        self._ins("\n", "body")
-        self._scroll()
 
     def _copy_code(self, code, lang, btn):
         provider = Gdk.ContentProvider.new_for_value(code)
@@ -2367,9 +2350,16 @@ b.addEventListener(\'click\',()=>{
         q = queue.Queue()
         full = []
         done = threading.Event()
+        # Dernier passage de texte « body » : sa marque de début dans le buffer et
+        # son contenu brut. À la fin, CE passage seul est effacé puis re-rendu
+        # (gras, titres, code) — le raisonnement et les 🔎 au-dessus restent.
+        passage = {"mark": None, "texte": [], "prec": None, "ok": False}
 
         def _drain():
             """Appelé par GLib toutes les 500ms — batch maximal, pas de scroll intermédiaire."""
+            # Lire « fini » AVANT de vider la file : sinon les derniers morceaux,
+            # posés juste avant done.set(), seraient perdus.
+            fini = done.is_set()
             items = []
             try:
                 while True: items.append(q.get_nowait())
@@ -2377,14 +2367,29 @@ b.addEventListener(\'click\',()=>{
             if items:
                 self.buf.begin_irreversible_action()
                 for kind, text in items:
-                    if kind == 'think': self._ins(text, "think")
-                    elif kind == 'body': self._ins(text, "body")
+                    if kind == 'body':
+                        if passage["prec"] != 'body':
+                            if passage["mark"] is not None:
+                                self.buf.delete_mark(passage["mark"])
+                            passage["mark"] = self.buf.create_mark(
+                                None, self.buf.get_end_iter(), True)
+                            passage["texte"] = []
+                        passage["texte"].append(text)
+                        self._ins(text, "body")
+                    elif kind == 'think': self._ins(text, "think")
                     elif kind == 'ai_lbl': self._ins(text, "ai")
                     elif kind == 'newline': self._ins("\n", "body")
+                    passage["prec"] = kind
                 self.buf.end_irreversible_action()
-                # Scroll seulement si la réponse est terminée
-                if done.is_set(): self._scroll()
-            return not done.is_set()
+            if fini:
+                if passage["ok"] and passage["mark"] is not None:
+                    debut = self.buf.get_iter_at_mark(passage["mark"])
+                    self.buf.delete(debut, self.buf.get_end_iter())
+                    self._render(''.join(passage["texte"]).strip('\n'))
+                if passage["mark"] is not None:
+                    self.buf.delete_mark(passage["mark"])
+                self._scroll()
+            return not fini
 
         GLib.timeout_add(500, _drain)
 
@@ -2427,11 +2432,7 @@ b.addEventListener(\'click\',()=>{
             save_session(self.session_name, self.history)
             GLib.idle_add(self._refresh_sidebar)
             GLib.idle_add(self.status.set_text, "✅ Réponse reçue.")
-            # Re-rendre proprement si la réponse contient du code
-            if '```' in reply:
-                GLib.idle_add(self._rerender_last_response, reply)
-            else:
-                GLib.idle_add(self._scroll)
+            passage["ok"] = True   # le dernier _drain re-rend le passage final
 
         except urllib.error.HTTPError as e:
             body2 = e.read().decode(errors="replace")
