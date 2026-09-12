@@ -182,3 +182,7 @@ GPL v3 — libre d'utilisation, modification et redistribution.
 
 - [DeepSeek](https://deepseek.com) pour l'API V4
 - La communauté [Fedora](https://fedoraproject.org) et [COPR](https://copr.fedorainfracloud.org)
+
+## 🎬 Tutoriel vidéo
+
+[![Tutoriel Nseek](https://img.youtube.com/vi/x5SahGQpG-c/0.jpg)](https://www.youtube.com/watch?v=x5SahGQpG-c&list=PLZOdZMT41b7WRG1EXgdhwyaGsND0_rbbs)
